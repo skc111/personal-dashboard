@@ -52,6 +52,14 @@
       this.config={enabled:false};this.lastSync='';this.localError='';this.cloudError='';this.desktopError='';
       this.backoffUntil=0;this.failures=0;this.running=false;this.ready=false;this.localRunning=false;this.timer=null;
     }
+    browserOnly() {
+      if(native||!this.ready)return false;
+      const content=C.stable(this.doc);
+      return content!==this.serverBody&&content!==this.ownConfirmed;
+    }
+    needsExitWarning() {
+      return !!(this.localWrites||this.localError||this.browserOnly());
+    }
     status() {
       const conflicts=C.conflicts(this.doc).length;
       let text;
@@ -64,7 +72,7 @@
       else if(this.ownConfirmed!==C.stable(this.doc)) text='已保存本地 · 等待同步';
       else text='已同步 '+new Date(this.lastSync).toLocaleTimeString('zh-CN',{hour12:false});
       if(conflicts) text+=' · '+conflicts+' 项待核对';
-      this.onStatus({text,conflicts,error:this.localError||this.cloudError||this.desktopError,lastSync:this.lastSync,enabled:this.config.enabled,running:this.running});
+      this.onStatus({text,conflicts,error:this.localError||this.cloudError||this.desktopError,lastSync:this.lastSync,enabled:this.config.enabled,running:this.running,browserOnly:this.browserOnly()});
     }
     async init() {
       const cached=await readCache();
@@ -83,7 +91,7 @@
       document.addEventListener('visibilitychange',resume);window.addEventListener('online',resume);window.addEventListener('dashboard-resume',resume);
       if(!native) {
         this.localTimer=setInterval(()=>{if(!document.hidden)this.flushDesktop().catch(()=>{});},5000);
-        window.addEventListener('beforeunload',e=>{if(this.localWrites||this.localError){e.preventDefault();e.returnValue='';}});
+        window.addEventListener('beforeunload',e=>{if(this.needsExitWarning()){e.preventDefault();e.returnValue='';}});
       }
     }
     persist() {

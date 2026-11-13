@@ -7,7 +7,12 @@ function renderSyncStatus(info) {
   if(badge){badge.textContent=info.conflicts?'需要核对':info.error?'待同步':info.running?'同步中':!info.enabled?'仅本地':info.text.includes('等待')?'待同步':'已同步';badge.title=info.text;badge.dataset.warn=!!(info.error||info.conflicts);}
   const detail=document.getElementById('syncDetailStatus');if(detail)detail.textContent=info.text+(info.error?'\n'+info.error:'');
   const conflict=document.getElementById('syncConflictBtn');if(conflict){conflict.textContent=`核对冲突（${info.conflicts}）`;conflict.hidden=!info.conflicts;}
-  if(info.error&&syncClient?.localError)saveBanner(true,'本地保存失败：'+info.error+'。请不要关闭页面，立即在同步设置中导出备份。');
+  if(info.error&&syncClient?.localError)saveBanner(true,'本地保存失败：'+info.error+'。请不要关闭页面，立即在同步设置中导出备份。','local-error');
+  else if(info.browserOnly&&syncClient?.desktopError)saveBanner(true,'最近修改仅保存在当前浏览器，尚未写入电脑或云端。请保留本页，并在同步设置中导出完整备份；清理浏览器数据可能丢失这些修改。','browser-only');
+  else {
+    const banner=document.getElementById('saveBanner');
+    if(banner&&['local-error','browser-only'].includes(banner.dataset.reason))saveBanner(false);
+  }
 }
 function reviewHasDraft() {
   return typeof reviewDirty!=='undefined' && reviewDirty;

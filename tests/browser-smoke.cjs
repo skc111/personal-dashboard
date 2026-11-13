@@ -27,8 +27,25 @@ const {startTestServer}=require('./browser-server.cjs');
   await tab.close();
   await page.route('**/api/**',r=>r.abort());
   await page.evaluate(async()=>{state.db.transactions.push({id:'offline-test',type:'expense',date:todayISO(),amount:12,category:'餐饮',note:'离线保存'});await save();});
+  // An IndexedDB-only save must not look as safe as a confirmed disk/cloud save.
+  assert(await page.evaluate(()=>syncClient.needsExitWarning()));
+  await page.locator('#saveBanner').waitFor({state:'visible'});
+  assert.match(await page.locator('#saveBanner').textContent(),/仅保存在当前浏览器/);
+  const [emergency]=await Promise.all([page.waitForEvent('download'),page.locator('#saveBanner button').click()]);
+  const emergencyData=JSON.parse(require('node:fs').readFileSync(await emergency.path(),'utf8'));
+  assert(emergencyData.transactions.some(t=>t.id==='offline-test'),'emergency export must include the unconfirmed edit');
+  assert(emergencyData._sync,'emergency export must preserve merge metadata');
+  let warned=false;
+  page.once('dialog',async dialog=>{assert.equal(dialog.type(),'beforeunload');warned=true;await dialog.accept();});
   await page.reload();await page.waitForFunction(()=>syncClient?.ready&&state.db.transactions.some(t=>t.id==='offline-test'));
+  assert(warned,'closing/reloading an unconfirmed offline edit must warn');
+  assert(await page.evaluate(()=>syncClient.needsExitWarning()));
   await page.unroute('**/api/**');await page.evaluate(()=>syncClient.flushDesktop());
+  await page.waitForFunction(()=>!syncClient.localRunning&&syncClient.localWrites===0&&!syncClient.needsExitWarning());
+  assert(await page.locator('#saveBanner').isHidden(),'warning should clear after disk confirmation');
+  // A current cloud acknowledgement is also a durable copy, even if disk is offline.
+  await page.evaluate(()=>{const old=syncClient.serverBody;syncClient.serverBody='';syncClient.ownConfirmed=DashboardSyncCore.stable(syncClient.doc);window.testConfirmedCloud=syncClient.needsExitWarning();syncClient.serverBody=old;});
+  assert.equal(await page.evaluate(()=>window.testConfirmedCloud),false);
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:require('node:path').join(fixture.dir,'home.png'),fullPage:true});
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false);
   for(const view of ['schedule','course','finance','deadline','review']){await page.locator(`#bottomNav [data-view="${view}"]`).click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'overflow in '+view);}

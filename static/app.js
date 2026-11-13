@@ -81,10 +81,16 @@ const state = {
 
 /* ================= 数据 ================= */
 function setStatus(t) { $("#saveStatus").textContent = t; }
-function saveBanner(show, text) {
+function saveBanner(show, text, reason = "") {
   let b = $("#saveBanner");
   if (!b) { b=document.createElement("div"); b.id="saveBanner";b.className="save-banner";document.body.appendChild(b); }
-  b.hidden=!show;if(text)b.textContent=text;
+  b.hidden=!show;if(text)b.textContent=text;b.dataset.reason=reason;
+  if(show&&text&&syncClient?.ready) {
+    const exportButton=document.createElement("button");
+    exportButton.type="button";exportButton.className="btn small";exportButton.textContent="立即导出备份";exportButton.style.marginLeft="8px";
+    exportButton.addEventListener("click",()=>exportFullBackup().catch(e=>toast("导出未完成："+e.message)));
+    b.append(" ",exportButton);
+  }
 }
 async function load() {
   syncClient=new DashboardSync.Client(applyRemoteUpdates,renderSyncStatus);
