@@ -41,7 +41,7 @@ async function seed(page){
   await page.evaluate(async()=>{
     const ym=todayISO().slice(0,7),[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDate();
     const long='布局测试：很长的标题与备注需要自然换行，不能挤压右侧操作按钮。';
-    for(let d=1;d<=days;d++)for(let i=0;i<15;i++)state.db.todos.push({id:`layout-${d}-${i}`,date:`${ym}-${String(d).padStart(2,'0')}`,title:long+i,start:`${String(i+6).padStart(2,'0')}:00`,end:`${String(i+6).padStart(2,'0')}:30`,priority:'normal',done:i<12,note:'SYNTHETIC_LONG_TEXT_'.repeat(12)});
+    for(let d=1;d<=days;d++)for(let i=0;i<15;i++)state.db.todos.push({id:`layout-${d}-${i}`,date:`${ym}-${String(d).padStart(2,'0')}`,title:'旧日程保留-'+i,start:`${String(i+6).padStart(2,'0')}:00`,end:`${String(i+6).padStart(2,'0')}:30`,priority:'normal',done:i<12,note:'SYNTHETIC_LONG_TEXT_'.repeat(12)});
     state.db.subjects.push({id:'layout-subject',name:long,teacher:'示例教师 / 3 学分',exam:long.repeat(5),notes:long,points:Array.from({length:12},(_,i)=>({id:`layout-point-${i}`,title:long,date:todayISO(),detail:('测试段落\n').repeat(5)})),questions:[{id:'layout-question',text:long,answer:long,done:false,date:todayISO()}],materials:[{id:'layout-material',title:long,url:'https://example.com/material'}]});
     state.db.trips.push({id:'layout-trip',city:'虚构城市旅行账本测试'.repeat(3),startDate:todayISO(),endDate:todayISO(),note:long});
     for(let i=0;i<10;i++)state.db.transactions.push({id:`layout-trans-${i}`,date:todayISO(),type:i===9?'income':'expense',amount:12345.67,category:i===9?'工资':'餐饮',note:long,tripId:i%2?'layout-trip':''});
@@ -61,25 +61,17 @@ async function seed(page){
       await page.goto(fixture.url);await page.waitForFunction(()=>syncClient?.ready);
       if(!seeded){await seed(page);seeded=true;}else await page.waitForFunction(()=>state.db.todos.some(t=>t.id==='layout-1-0'));
       const initial=await page.evaluate(()=>JSON.stringify(state.db));
+      assert.equal(await page.locator('[data-view="schedule"],#view-schedule,[data-modal="todo"],#dashTodos').count(),0);
       if(mobile){
-        assert.deepEqual(await page.locator('#bottomNav button>span:last-child').allTextContents(),['今日','日程','课程','记账','DDL','回顾']);
+        assert.deepEqual(await page.locator('#bottomNav button>span:last-child').allTextContents(),['今日','课程','记账','DDL','回顾']);
         assert.equal(await page.locator('#bottomNav .active').getAttribute('data-view'),'dashboard');
         const nav=await page.evaluate(()=>{const b=document.querySelector('#bottomNav').getBoundingClientRect();return {bottom:b.bottom,last:Math.max(...[...document.querySelectorAll('#bottomNav button>span:last-child')].map(s=>s.getBoundingClientRect().bottom))}});
         assert(nav.bottom<=height+1&&nav.last<=height-5,'bottom labels cut off');
       }
       for(const theme of ['light','dark']){
         await page.evaluate(theme=>applyTheme(theme),theme);
-        for(const view of ['dashboard','schedule','course','finance','deadline','review']){
+        for(const view of ['dashboard','course','finance','deadline','review']){
           await page.locator(`${mobile?'#bottomNav':'#nav'} [data-view=${view}]`).click();await wait(page);await bounds(page,`${width}/${theme}/${view}`);
-          if(view==='schedule'){
-            const cells=await page.evaluate(()=>{
-              const headers=[...document.querySelectorAll('.cal-head>div')].map(x=>x.getBoundingClientRect());
-              return [...document.querySelectorAll('.cal-cell[data-date]')].map(el=>{const d=new Date(el.dataset.date+'T00:00'),r=el.getBoundingClientRect(),h=headers[(d.getDay()+6)%7];return {right:r.right,delta:Math.abs((r.left+r.right-h.left-h.right)/2),badge:el.querySelector('.cal-badge').textContent}});
-            });
-            assert(cells.every(c=>c.right<=width&&c.delta<1&&c.badge==='12/15'),'calendar weekday columns shifted or overflowing');
-            const tab=await page.locator('#schedTabs').evaluate(el=>[...el.children].map(b=>({height:b.clientHeight,text:b.textContent.trim(),line:parseFloat(getComputedStyle(b).lineHeight)})));
-            assert(tab.every(t=>t.height<t.line*2+12),'schedule labels wrap vertically');
-          }
           if(mobile){
             await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await wait(page);
             const bottom=await page.locator('.view.active').evaluate(el=>el.getBoundingClientRect().bottom);
@@ -92,24 +84,23 @@ async function seed(page){
         }
       }
       await page.evaluate(()=>applyTheme('light'));
-      for(const type of ['todo','trans','course','deadline','trip','settings']){
+      for(const type of ['trans','course','deadline','trip','settings']){
         await page.evaluate(type=>openModal(type),type);await sheetBounds(page,`${width}/${type}`);
         if(mobile)assert.equal(await page.evaluate(()=>document.activeElement.id),'modalClose','entry must not automatically summon keyboard');
         else if(type==='trans')assert.equal(await page.evaluate(()=>document.activeElement.id),'transAmount','desktop accounting should focus the amount');
-        if(type==='todo'&&mobile){
-          await page.setViewportSize({width,height:Math.min(height,640)});await wait(page);
-          await page.locator('#todoRepeat').selectOption('每周');
+        if(type==='trans'&&mobile){
+          await page.setViewportSize({width,height:Math.min(height,560)});await wait(page);
           await page.locator('#modalBody').evaluate(el=>el.scrollTop=0);
           const before=await page.locator('#modalBody').evaluate(el=>el.scrollTop);
           await swipe(page);
           assert(await page.locator('#modalBody').evaluate(el=>el.scrollTop)>before+30,'touch gesture cannot scroll the form');
           assert.equal(await page.evaluate(()=>window.scrollY),0,'background page scrolled instead of form');
-          await page.locator('#todoNote').fill('测试备注第一行\n第二行');
+          await page.locator('#transNote').fill('测试备注第一行\n第二行');
           await page.setViewportSize({width,height:Math.min(height,380)});await sheetBounds(page,`${width}/keyboard`);
-          await page.locator('#todoForm [type=submit]').scrollIntoViewIfNeeded();
-          const save=await page.locator('#todoForm [type=submit]').boundingBox();assert(save.y+save.height<=page.viewportSize().height+1,'save hidden by simulated keyboard');
+          await page.locator('#transForm [type=submit]').scrollIntoViewIfNeeded();
+          const save=await page.locator('#transForm [type=submit]').boundingBox();assert(save.y+save.height<=page.viewportSize().height+1,'save hidden by simulated keyboard');
           await page.setViewportSize({width,height});
-          if(process.env.MOBILE_SCREENSHOTS && width===390)await page.screenshot({path:path.join(process.env.MOBILE_SCREENSHOTS,'schedule-form.png')});
+          if(process.env.MOBILE_SCREENSHOTS && width===390)await page.screenshot({path:path.join(process.env.MOBILE_SCREENSHOTS,'finance-form.png')});
         }
         await page.locator('#modalClose').click();assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('modal-open')),false,'scroll lock remains after close');
       }
@@ -123,29 +114,27 @@ async function seed(page){
       await sheetBounds(page,`${width}/sync-help`);await page.locator('#modalClose').click();
       // Large text: preserve readable labels, permit tab-strip scrolling, never page overflow.
       if(mobile){
-        const style=await page.addStyleTag({content:'body {font-size:19px} .tabs button,.segmented button {font-size:18px} .bottom-nav button {font-size:16px} .cal-badge {font-size:13px}'});
-        for(const v of ['schedule','course','finance','deadline','review']){await page.evaluate(v=>switchView(v),v);await wait(page);await bounds(page,`${width}/large-text/${v}`);}
-        await page.evaluate(()=>openModal('todo'));await sheetBounds(page,`${width}/large-text/modal`);await page.locator('#modalClose').click();await style.evaluate(el=>el.remove());
+        const style=await page.addStyleTag({content:'body {font-size:19px} .tabs button,.segmented button {font-size:18px} .bottom-nav button {font-size:16px}'});
+        for(const v of ['course','finance','deadline','review']){await page.evaluate(v=>switchView(v),v);await wait(page);await bounds(page,`${width}/large-text/${v}`);}
+        await page.evaluate(()=>openModal('deadline'));await sheetBounds(page,`${width}/large-text/modal`);await page.locator('#modalClose').click();await style.evaluate(el=>el.remove());
       }
       assert.equal(await page.evaluate(()=>JSON.stringify(state.db)),initial,'layout interactions changed saved records');
       if(width===320){
         // Real save/reload on a phone-sized page; do not rely only on layout reads.
         await page.evaluate(()=>switchView('dashboard'));
-        await page.locator('.hero [data-modal=todo]').click();
-        await page.locator('#todoTitle').fill('虚构移动端保存验证');
-        await page.locator('#todoStartH').fill('8');await page.locator('#todoStartM').fill('15');
-        await page.locator('#todoEndH').fill('9');await page.locator('#todoEndM').fill('00');
-        await page.locator('#todoRepeat').selectOption('每周');await page.locator('#todoRepeatCount').fill('3');
-        await page.locator('#todoNote').fill('备注第一行\n第二行不会触发保存');
-        await page.locator('#todoForm [type=submit]').click();
+        await page.locator('.hero [data-modal=deadline]').click();
+        await page.locator('#ddlTitle').fill('虚构移动端保存验证');
+        await page.locator('#ddlTimeH').fill('8');await page.locator('#ddlTimeM').fill('15');
+        await page.locator('#ddlNote').fill('备注第一行\n第二行不会触发保存');
+        await page.locator('#deadlineForm [type=submit]').click();
         await page.waitForFunction(()=>document.querySelector('#modalOverlay').hidden&&syncClient.localWrites===0&&!syncClient.localRunning);
         await page.reload();await page.waitForFunction(()=>syncClient?.ready);
-        assert.equal(await page.evaluate(()=>state.db.todos.filter(t=>t.title==='虚构移动端保存验证'&&t.start==='08:15'&&t.end==='09:00'&&t.note.includes('\n')).length),3);
+        assert.equal(await page.evaluate(()=>state.db.deadlines.filter(t=>t.title==='虚构移动端保存验证'&&t.time==='08:15'&&t.note.includes('\n')).length),1);
         // Restore this isolated fixture for the remaining size profiles.
-        await page.evaluate(async()=>{state.db.todos=state.db.todos.filter(t=>t.title!=='虚构移动端保存验证');await save();});
+        await page.evaluate(async()=>{state.db.deadlines=state.db.deadlines.filter(t=>t.title!=='虚构移动端保存验证');await save();});
         await page.waitForFunction(()=>syncClient.localWrites===0&&!syncClient.localRunning);
       }
-      assert.deepEqual(errors,[]);console.log(`PASS ${width}×${height}: populated pages, calendar, navigation, forms, course tabs, sync settings${mobile?', touch swipe, keyboard-size viewport, enlarged text':''}`);
+      assert.deepEqual(errors,[]);console.log(`PASS ${width}×${height}: populated pages, hidden legacy schedules, five-tab navigation, forms, course tabs, sync settings${mobile?', touch swipe, keyboard-size viewport, enlarged text':''}`);
       await context.close();
     }
   }finally{await browser.close();await fixture.close();}

@@ -106,8 +106,6 @@ main { flex: 1; min-width: 0; padding: 0 30px 60px; }
 .panel h3 { margin: 0; font-size: 15px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-.dash-side { display: flex; flex-direction: column; gap: 16px; }
-.dash-side .panel { margin-bottom: 0; }
 
 .btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -248,43 +246,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .empty { text-align: center; color: var(--muted); padding: 26px 0; font-size: 13.5px; }
 .empty .empty-ico { font-size: 26px; display: block; margin-bottom: 6px; opacity: .7; }
 
-/* ================= 日历 ================= */
-.month-nav { display: flex; align-items: center; gap: 8px; }
-.month-title { font-weight: 700; min-width: 92px; text-align: center; font-size: 15px; }
-.calendar { user-select: none; margin-top: 4px; }
-.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
-.cal-head div { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
-.cal-cell {
-  min-height: 58px; border: 1px solid var(--transparent-border, var(--border));
-  border-radius: 10px; padding: 7px 8px; cursor: pointer;
-  background: var(--panel); transition: border-color .12s, background .12s;
-}
-.cal-cell:hover { border-color: var(--primary); }
-.cal-cell.empty { border: none; background: transparent; cursor: default; }
-.cal-cell.today { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-.cal-cell.selected { background: var(--primary-soft); }
-.cal-day { font-size: 13px; font-weight: 600; }
-.cal-badge { font-size: 11px; color: var(--muted); margin-top: 5px; background: var(--panel2); border-radius: 10px; padding: 1px 6px; display: inline-block; }
-.cal-badge.all-done { color: var(--ok); background: rgba(47, 169, 110, .12); }
-
-/* ================= 日视图时间轴 ================= */
-.timeline { position: relative; margin-top: 14px; }
-.timeline::before { content: ""; position: absolute; left: 81px; top: 14px; bottom: 14px; width: 2px; background: var(--border); }
-.tl-node { display: flex; gap: 12px; padding-bottom: 16px; position: relative; }
-.tl-time { width: 64px; flex-shrink: 0; text-align: right; font-size: 12.5px; color: var(--muted); padding-top: 10px; line-height: 1.5; font-variant-numeric: tabular-nums; }
-.tl-rail { width: 14px; flex-shrink: 0; display: flex; justify-content: center; }
-.tl-dot {
-  width: 12px; height: 12px; border-radius: 50%; margin-top: 13px;
-  background: var(--primary); box-shadow: 0 0 0 2px var(--primary);
-  border: 2.5px solid var(--panel); position: relative; z-index: 1;
-}
-.tl-dot.done { background: var(--ok); box-shadow: 0 0 0 2px var(--ok); }
-.tl-dot.high { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
-.tl-dot.low { background: var(--muted); box-shadow: 0 0 0 2px var(--muted); }
-.tl-card { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 10px 14px; box-shadow: var(--shadow); }
-.tl-card.done .title { text-decoration: line-through; color: var(--muted); }
-.tl-card .ops { display: flex; gap: 6px; }
-
 /* ================= 图表 ================= */
 .pie-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
 .pie { width: 128px; height: 128px; border-radius: 50%; background: var(--panel2); flex-shrink: 0; }
@@ -364,6 +325,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 input.invalid, .time-inputs input.invalid { border-color: var(--danger); }
 
 /* 三列统计卡（记账页） */
+.stats-grid.stats-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .stats-grid.stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 720px) { .stats-grid.stats-3 { grid-template-columns: 1fr; } }
 
@@ -449,7 +411,7 @@ input.invalid, .time-inputs input.invalid { border-color: var(--danger); }
 }
 .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* 今日：桌面等宽两列，安排在左，其他卡片在右。 */
+/* 今日：收支与课程等宽排列，窄屏自动纵向。 */
 .dash-grid > .panel { margin-bottom: 0; }
 @media (max-width: 1000px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
 
@@ -493,18 +455,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .btn { justify-content: center; line-height: 1.5; }
 .icon-btn { flex-shrink: 0; }
 .panel, .field, .row2 > *, .row3 > *, .stat-card > div, .subject-detail-head > div { min-width: 0; }
-.panel h3, .item .title, .item .note, .tl-card, .subject-meta, .stat-card .sub,
+.panel h3, .item .title, .item .note, .subject-meta, .stat-card .sub,
 .hero-sub, .legend-row, .modal-head h3, .subject-detail-head { overflow-wrap: anywhere; word-break: break-word; }
 .tabs, .segmented { min-width: 0; max-width: 100%; overflow-x: auto; }
 .tabs button, .segmented button { flex: 0 0 auto; white-space: nowrap; line-height: 1.5; }
-.schedule-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-.cal-cell { min-width: 0; font-family: inherit; color: inherit; text-align: left; }
-.cal-badge { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
-.day-toolbar h3 { flex: 1; text-align: center; }
-.day-weekday { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
-.tl-card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; }
-.tl-note { width: 100%; white-space: pre-wrap; color: var(--muted); font-size: 13px; }
-.tl-card .ops { flex-wrap: wrap; }
 .subject-detail-head { gap: 12px; flex-wrap: wrap; }
 .legend-row { gap: 8px; flex-wrap: wrap; }
 .legend-row b { margin-left: auto; }
@@ -513,7 +467,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .modal-head h3 { min-width: 0; }
 .modal-actions { flex-wrap: wrap; }
 #reviewTabs { margin-bottom: 12px; }
-#todoList { scroll-margin-top: 12px; }
 
 /* ================= 手机 / 窄屏（统一覆盖） ================= */
 @media (max-width: 860px) {
@@ -554,7 +507,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   /* 导航本身和正文各自预留高度；一份图标、一份文字。 */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px;
     background: var(--panel); border-top: 1px solid var(--border);
     padding: 6px 6px 10px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -571,28 +524,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .bottom-nav .nav-ico { width: auto; font-size: 21px; line-height: 24px; }
   .app-toast { bottom: calc(var(--bottom-nav-height, 76px) + 12px); }
 
-  /* 七列用零最小宽度，不让两位数计数把周六、周日挤出屏幕。 */
-  .schedule-toolbar { gap: 10px; }
-  .schedule-toolbar .month-nav { width: 100%; justify-content: space-between; }
-  #schedTabs { display: flex; width: 100%; }
-  #schedTabs button { flex: 1 0 auto; padding: 8px 6px; font-size: 13px; }
-  .schedule-actions { width: 100%; justify-content: flex-end; }
-  .cal-head, .cal-grid { gap: 4px; }
-  .cal-cell { padding: 6px 2px; min-height: 61px; border-radius: 8px; }
-  .cal-day { text-align: center; font-size: 14px; }
-  .cal-badge { display: block; padding: 2px 0; font-size: 10px; text-align: center; line-height: 16px; }
-  .day-toolbar { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; }
-  .day-toolbar h3 { font-size: 16px; }
-  .day-step { padding: 0 !important; }
-  .day-step .day-step-text { display: none; }
-  .day-add { grid-column: 1 / -1; justify-self: end; }
-  .tl-node { gap: 6px; }
-  .tl-time { width: 36px; font-size: 11px; }
-  .tl-rail { width: 12px; }
-  .timeline::before { left: 47px; }
-  .tl-card { padding: 10px; }
-  .tl-card .ops { gap: 5px; }
-  .tl-card .ops .btn { padding: 6px 9px; }
   .item { padding: 12px; flex-wrap: wrap; }
   .item > input[type=checkbox] { flex-shrink: 0; width: 22px !important; height: 22px !important; }
   .item .body { flex: 1 1 calc(100% - 40px); }
@@ -638,5 +569,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
-.cal-day { display: block; }
 .bottom-nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+@media (max-width: 480px) { .stats-grid.stats-2 .stat-ico { display: none; } }

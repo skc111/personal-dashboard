@@ -18,7 +18,7 @@ ANDROID_LIBS=/path/to/jars \
 bash android/build.sh
 ```
 
-输出 `android/dist/personal-dashboard-1.0.1.apk`（文件名跟随 Manifest 的版本，构建前校验与 `package.json` 一致）。最低 Android 8.0，目标 API 35，签名 v2/v3。
+输出 `android/dist/personal-dashboard-1.0.2.apk`（文件名跟随 Manifest 的版本，构建前校验与 `package.json` 一致）。最低 Android 8.0，目标 API 35，签名 v2/v3。
 
 首次自行编译会生成自己的私密签名文件；`android/signing/` 必须留在本机。使用自己的密钥签名后不能直接覆盖他人签名的安装包，请先导出数据再迁移。
 
@@ -26,7 +26,7 @@ bash android/build.sh
 
 ```bash
 python3 tools/package_release.py --output ../release-artifacts \
-  --apk android/dist/personal-dashboard-1.0.1.apk
+  --apk android/dist/personal-dashboard-1.0.2.apk
 ```
 
 不要把编译目录、签名目录、用户 `data/` 放入仓库或发布包。第三方许可见仓库 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
@@ -34,6 +34,6 @@ python3 tools/package_release.py --output ../release-artifacts \
 ## UI 升级自检
 
 - 原包名、签名密钥、`offline-state.json`、`sync-secret` 和 Keystore alias 不变；不要先卸载旧版。
-- `npm run test:browser` 包含虚构的密集日历、六个页面、长表单触摸滑动、长标题、大字与小高度视口测试；不连接日常使用的服务。
+- `npm run test:browser` 包含虚构的历史日程保留、六个页面、长表单触摸滑动、长标题、大字与小高度视口测试；不连接日常使用的服务。
 - 浏览器缩小视口只能模拟键盘占位。发布前还应在真机检查：手势导航 / 三键导航、横竖屏、主题切换、输入时滚动、收起键盘、保存后关闭，以及覆盖安装后的记录和账号。
 - 系统边距由原生容器统一处理，WebView 使用剩余内容区域，不能再硬编码系统导航栏高度。

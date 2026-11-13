@@ -1,7 +1,7 @@
 {
   "name": "personal-dashboard",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "test": "node tests/sync-core.test.js",
     "test:browser": "node tests/browser-smoke.cjs && node tests/sync-integration.cjs && node tests/mobile-layout.cjs"

@@ -23,7 +23,6 @@ const todayISO = () => isoOf(new Date());
 function addDays(iso, n) { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return isoOf(d); }
 function mondayOf(iso) { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoOf(d); }
 function weekDates(mon) { return Array.from({ length: 7 }, (_, i) => addDays(mon, i)); }
-function shiftMonth(ym, n) { const [y, m] = ym.split("-").map(Number); const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 function fmtCN(iso) { const d = new Date(iso + "T00:00"); return `${d.getMonth() + 1}月${d.getDate()}日 周${"日一二三四五六"[d.getDay()]}`; }
 function greet() { const h = new Date().getHours(); return h < 6 ? "夜深了" : h < 11 ? "早上好" : h < 14 ? "中午好" : h < 18 ? "下午好" : "晚上好"; }
 const parseTags = (s) => s.split(/[,，]/).map((x) => x.trim()).filter(Boolean);
@@ -31,18 +30,6 @@ const parseLines = (s) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 
 /* ============ 时间直接输入 + 校验 ============ */
 const pad2 = (n) => String(n).padStart(2, "0");
-
-function nextRepeatDate(dateStr, mode, i) {
-  if (mode === "每天") return addDays(dateStr, i);
-  if (mode === "每周") return addDays(dateStr, i * 7);
-  if (mode === "每两周") return addDays(dateStr, i * 14);
-  if (mode === "每月") {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const dt = new Date(y, m - 1 + i, d);
-    return isoOf(dt);
-  }
-  return dateStr;
-}
 
 function setTimeVal(id, val) {
   const m = /^(\d{1,2}):(\d{1,2})$/.exec(val || "");
@@ -73,7 +60,6 @@ const PALETTE = ["#4a6cf7", "#2fa96e", "#df9a2b", "#e5484d", "#9b59b6", "#00b8d4
 /* ================= 状态 ================= */
 const state = {
   db: null, view: "dashboard",
-  schedTab: "today", schedDate: todayISO(), calMonth: todayISO().slice(0, 7),
   courseSearch: "",
   financeMonth: todayISO().slice(0, 7),
   weekOffset: 0, reviewTab: "daily", subjectTab: "points",
@@ -117,55 +103,6 @@ function toggleTheme() {
 
 /* ================= 弹窗 ================= */
 const MODALS = {
-  todo: {
-    title: () => "添加日程", editTitle: () => "编辑日程",
-    html: () => `
-      <form id="todoForm">
-        <input type="hidden" id="todoId"><input type="hidden" id="todoPriorityVal" value="normal">
-        <label class="field">事项<input id="todoTitle" required placeholder="要做什么…"></label>
-        <div class="row3">
-          <label class="field">日期<input type="date" id="todoDate" required value="${todayISO()}"></label>
-          <div class="field"><span>开始（留空=不限）</span>
-            <div class="time-inputs">
-              <input type="number" id="todoStartH" min="0" max="23" step="1" placeholder="时" inputmode="numeric">
-              <span class="ti-colon">:</span>
-              <input type="number" id="todoStartM" min="0" max="59" step="1" placeholder="分" inputmode="numeric">
-              <input type="hidden" id="todoStart">
-            </div>
-          </div>
-          <div class="field"><span>结束（留空=不限）</span>
-            <div class="time-inputs">
-              <input type="number" id="todoEndH" min="0" max="23" step="1" placeholder="时" inputmode="numeric">
-              <span class="ti-colon">:</span>
-              <input type="number" id="todoEndM" min="0" max="59" step="1" placeholder="分" inputmode="numeric">
-              <input type="hidden" id="todoEnd">
-            </div>
-          </div>
-        </div>
-        <div class="field"><span>优先级</span>
-          <div class="segmented" id="todoPrioritySeg">
-            <button type="button" data-v="high">高</button><button type="button" data-v="normal" class="active">中</button><button type="button" data-v="low">低</button>
-          </div>
-        </div>
-        <div class="row2">
-          <label class="field">重复
-            <select id="todoRepeat">
-              <option value="">不重复</option>
-              <option value="每天">每天</option>
-              <option value="每周">每周</option>
-              <option value="每两周">每两周</option>
-              <option value="每月">每月</option>
-            </select>
-          </label>
-          <label class="field" id="todoRepeatCountWrap" hidden>重复次数（含首日）
-            <input type="number" id="todoRepeatCount" min="2" max="60" placeholder="如 16">
-          </label>
-        </div>
-        <p id="todoRepeatHint" class="muted small-text" hidden style="margin:-6px 0 10px"></p>
-        <label class="field">备注（可换行）<textarea id="todoNote" rows="2" placeholder="可选"></textarea></label>
-        <div class="modal-actions"><button class="btn ghost" type="button" data-close>取消</button><button class="btn primary" type="submit">添加</button></div>
-      </form>`,
-  },
   course: {
     title: () => "新建课程", editTitle: () => "编辑课程",
     html: () => `
@@ -327,20 +264,16 @@ function setSeg(segId, val) {
 const segVal = (segId) => $("#" + segId)?.querySelector(".active")?.dataset.v || "";
 
 function openModal(type, editing = false) {
-  modalType = type;
   const m = MODALS[type];
+  if (!m) return;
+  modalType = type;
   $("#modalTitle").textContent = editing ? m.editTitle() : m.title();
   $("#modalBody").innerHTML = m.html();
-  if (type === "todo") {
-    setTimeVal("todoStart", ""); setTimeVal("todoEnd", "");
-    $("#todoRepeat").value = ""; $("#todoRepeatCountWrap").hidden = true; $("#todoRepeatHint").hidden = true;
-  }
   if (type === "trans") { refreshCatOptions(); refreshTripOptions(); autoPickTrip($("#transDate").value || todayISO()); }
   if (type === "settings") fillSettings();
   if (type === "deadline") setTimeVal("ddlTime", "");
   showModal();
 }
-let modalCloseCallback = null;
 function closeModal() {
   if ($("#modalOverlay").hidden) return;
   if ($("#modalOverlay").contains(document.activeElement)) document.activeElement.blur();
@@ -351,26 +284,7 @@ function closeModal() {
   window.scrollTo(0, modalScrollY);
   if (modalOrigin?.isConnected) modalOrigin.focus({ preventScroll: true });
   modalOrigin = null;
-  if (modalCloseCallback) { const cb = modalCloseCallback; modalCloseCallback = null; cb(-1); }
   setTimeout(applyRemoteUpdates,0);
-}
-function choiceDialog(title, buttons) {
-  return new Promise((resolve) => {
-    openWideModal(title, `<div class="choice-body">${buttons.map((b, i) =>
-      `<button type="button" class="btn ${b.cls || ""}" style="width:100%;justify-content:center" data-choice="${i}">${b.label}</button>`).join("")}</div>`);
-    $(".modal").classList.add("compact");
-    modalCloseCallback = (value) => { $("#modalBody").removeEventListener("click", handler); resolve(value); };
-    const handler = (e) => {
-      const b = e.target.closest("[data-choice]");
-      if (!b) return;
-      $("#modalBody").removeEventListener("click", handler);
-      const idx = Number(b.dataset.choice);
-      modalCloseCallback = null;
-      closeModal();
-      resolve(idx);
-    };
-    $("#modalBody").addEventListener("click", handler);
-  });
 }
 function openWideModal(title, html) {
   modalType = "subjectDetail";
@@ -401,11 +315,11 @@ function fillSettings() {
   setSeg("themeSeg", state.db.settings.theme);
   $("#expenseCats").value = state.db.settings.categories.join("，");
   $("#incomeCats").value = state.db.settings.incomeCategories.join("，");
-  $("#sampleBtn").disabled = !!(state.db.todos.length || state.db.courses.length || state.db.transactions.length || state.db.studies.length);
+  $("#sampleBtn").disabled = !!(state.db.subjects.length || state.db.transactions.length || state.db.deadlines.length || state.db.trips.length);
 }
 
 /* ================= 视图 ================= */
-const TITLES = { dashboard: "今日", schedule: "日程", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", review: "回顾" };
+const TITLES = { dashboard: "今日", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", review: "回顾" };
 function switchView(view) {
   if (!Object.hasOwn(TITLES, view)) view = "dashboard";
   state.view = view;
@@ -420,7 +334,7 @@ function switchView(view) {
   window.scrollTo(0, 0);
 }
 function render() {
-  ({ dashboard: renderDashboard, schedule: renderSchedule, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, review: renderReview }[state.view] || renderDashboard)();
+  ({ dashboard: renderDashboard, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, review: renderReview }[state.view] || renderDashboard)();
 }
 
 /* ================= 今日 ================= */
@@ -441,19 +355,15 @@ function renderDashboard() {
   if (!clockTimer) clockTimer = setInterval(tickClock, 1000);
   const today = todayISO(), db = state.db;
   $("#dashGreeting").textContent = `${greet()}，今天是 ${fmtCN(today)}`;
-  const todos = db.todos.filter((t) => t.date === today);
   const trans = db.transactions.filter((t) => t.date === today);
   const courses = [];
   (db.subjects || []).forEach((sub) => (sub.points || []).forEach((p) => { if (p.date === today) courses.push({ course: sub.name, topic: p.title }); }));
-  const exp = sum(trans.filter((t) => t.type === "expense"), (t) => t.amount);
+  const todayMain = trans.filter((t) => t.type === "expense" && !t.tripId);
+  const todayMainExp = sum(todayMain, (t) => t.amount);
   const todayTripExp = sum(trans.filter((t) => t.tripId && t.type === "expense"), (t) => t.amount);
-  const todayMainExp = exp - todayTripExp;
-  const todayMainCnt = trans.filter((t) => t.type === "expense" && !t.tripId).length;
-  const inc = sum(trans.filter((t) => t.type === "income"), (t) => t.amount);
-  $("#dashSub").textContent = `${todos.filter((t) => t.done).length}/${todos.length} 项待办完成 · 今日支出 ${money(todayMainExp)}${todayTripExp ? `（旅行 ${money(todayTripExp)} 另计）` : ""}`;
+  $("#dashSub").textContent = `今日支出 ${money(todayMainExp)}${todayTripExp ? `（旅行 ${money(todayTripExp)} 另计）` : ""}`;
 
-  const doneCnt = todos.filter((t) => t.done).length;
-  const ddls = sortBy((state.db.deadlines || []).filter((t) => !t.done), ["date", "time"]).slice(0, 5);
+  const ddls = sortBy((db.deadlines || []).filter((t) => !t.done), ["date", "time"]).slice(0, 5);
   $("#dashDdl").innerHTML = ddls.length ? `<div class="panel ddl-banner">
     <div class="panel-head"><h3>🎯 近期 DDL</h3><button class="btn small ghost" data-goto="deadline">全部 →</button></div>
     ${ddls.map((t) => { const [txt, cls] = ddlBadge(t); return `
@@ -465,121 +375,14 @@ function renderDashboard() {
       </div>`; }).join("")}
   </div>` : "";
   $("#dashStats").innerHTML = `
-    <div class="stat-card"><div class="stat-ico">✅</div><div><div class="label">今日待办</div><div class="value">${doneCnt} / ${todos.length}</div><div class="sub">${todos.length - doneCnt} 项待完成</div></div></div>
-    <div class="stat-card"><div class="stat-ico">💰</div><div><div class="label">今日支出</div><div class="value">${money(todayMainExp)}</div><div class="sub">${todayMainCnt} 笔${todayTripExp ? ` · 旅行 ${money(todayTripExp)} 另计` : ""}</div></div></div>
+    <div class="stat-card"><div class="stat-ico">💰</div><div><div class="label">今日支出</div><div class="value">${money(todayMainExp)}</div><div class="sub">${todayMain.length} 笔${todayTripExp ? ` · 旅行 ${money(todayTripExp)} 另计` : ""}</div></div></div>
     <div class="stat-card"><div class="stat-ico">📚</div><div><div class="label">课程总结</div><div class="value">${courses.length} 篇</div><div class="sub">${[...new Set(courses.map((c) => esc(c.course)))].join("、") || "暂无"}</div></div></div>`;
-
-  const pri = { high: 0, normal: 1, low: 2 };
-  $("#dashTodos").innerHTML = todos.length
-    ? todos.slice().sort((a, b) => (a.start || "99").localeCompare(b.start || "99") || (a.done - b.done)).map((t) => `
-      <div class="mini-row" data-id="${t.id}">
-        <span class="mini-time" style="width:96px">${t.start ? (t.end ? `${t.start}–${t.end}` : t.start) : "全天"}</span>
-        <span class="mini-title ${t.done ? "done" : ""}">${esc(t.title)}</span>
-        <button class="mini-check ${t.done ? "done" : ""}" data-action="toggleTodoBtn" title="${t.done ? "撤销完成" : "标记完成"}">✓</button>
-      </div>`).join("")
-    : emptyHTML("🗓️", "今天还没有安排", "todo");
-
   $("#dashFinance").innerHTML = trans.length
     ? trans.map((t) => `<div class="mini-row"><span class="mini-title">${esc(t.category)}${t.note ? " · " + esc(t.note) : ""}</span><span class="mini-amount" style="color:${t.type === "income" ? "var(--ok)" : "var(--danger)"}">${t.type === "income" ? "+" : "-"}${money(t.amount)}</span></div>`).join("")
     : emptyHTML("💰", "今天还没有记账", "trans");
-
   $("#dashCourses").innerHTML = courses.length
     ? courses.map((c) => `<div class="mini-row"><span class="mini-title">${esc(c.course)}｜${esc(c.topic)}</span></div>`).join("")
     : `<div class="empty" style="padding:16px 0">今天暂无课程总结</div>`;
-}
-
-/* ================= 日程 ================= */
-function todoItemHTML(t, hideDate = false) {
-  const pri = { high: "高", normal: "中", low: "低" }[t.priority] || "中";
-  const overdue = !t.done && t.date < todayISO();
-  return `<div class="item ${t.done ? "done" : ""}" data-id="${t.id}">
-    <input type="checkbox" data-action="toggleTodo" ${t.done ? "checked" : ""} style="width:17px;height:17px;margin-top:3px">
-    <div class="body">
-      <div class="title">${esc(t.title)} ${t.carried ? '<span class="badge">顺延</span>' : ""} ${overdue ? '<span class="badge overdue">已过期</span>' : ""}</div>
-      <div class="meta">${t.start || t.end ? `<span>⏰ ${esc(t.start || "")}${t.end ? " – " + esc(t.end) : ""}</span>` : ""}<span class="badge ${t.priority}">${pri}</span>${t.repeat ? `<span class="badge">${esc(t.repeat)}</span>` : ""}${hideDate ? "" : `<span>${fmtCN(t.date)}</span>`}</div>
-      ${t.note ? `<div class="note">${esc(t.note)}</div>` : ""}
-    </div>
-    <div class="ops"><button class="btn small" data-action="editTodo">编辑</button><button class="btn small danger" data-action="delTodo">删除</button></div>
-  </div>`;
-}
-function dayViewHTML(todos, date) {
-  const timed = sortBy(todos.filter((t) => t.start), ["start"]);
-  const untimed = todos.filter((t) => !t.start);
-  const pri = { high: "高", normal: "中", low: "低" };
-  const node = (t) => `
-    <div class="tl-node" data-id="${t.id}">
-      <div class="tl-time">${esc(t.start)}${t.end ? `<br>↓<br>${esc(t.end)}` : ""}</div>
-      <div class="tl-rail"><div class="tl-dot ${t.done ? "done" : t.priority}"></div></div>
-      <div class="tl-card ${t.done ? "done" : ""}">
-        <div class="title">${esc(t.title)} ${t.carried ? '<span class="badge">顺延</span>' : ""}</div>
-        <div class="meta"><span class="badge ${t.priority}">${pri[t.priority] || "中"}</span>${t.repeat ? `<span class="badge">${esc(t.repeat)}</span>` : ""}${t.done ? '<span class="badge ok">已完成</span>' : ""}${t.note ? `<span class="tl-note">📝 ${esc(t.note)}</span>` : ""}</div>
-        <div class="ops" style="margin-top:8px">
-          <button class="btn small" data-action="toggleTodoBtn">${t.done ? "↩ 撤销" : "✓ 完成"}</button>
-          <button class="btn small" data-action="editTodo">编辑</button>
-          <button class="btn small danger" data-action="delTodo">删除</button>
-        </div>
-      </div>
-    </div>`;
-  return `<div class="panel">
-    <div class="toolbar day-toolbar">
-      <button class="btn small day-step" data-action="dayPrev" aria-label="前一天">◀<span class="day-step-text">前一天</span></button>
-      <h3>${date === todayISO() ? "今天 · " : ""}${fmtCN(date).split(" ")[0]}<span class="day-weekday">${fmtCN(date).split(" ")[1]}</span></h3>
-      <button class="btn small day-step" data-action="dayNext" aria-label="后一天"><span class="day-step-text">后一天</span>▶</button>
-      <button class="btn primary small day-add" data-modal="todo" data-date="${date}">＋ 添加到这天</button>
-    </div>
-    ${timed.length ? `<div class="timeline">${timed.map(node).join("")}</div>` : ""}
-    ${untimed.length ? `<div class="date-group-title" style="margin-top:16px">🕐 未安排具体时间（${untimed.length}）</div>${untimed.map((t) => todoItemHTML(t, true)).join("")}` : ""}
-    ${!timed.length && !untimed.length ? `<div class="empty"><span class="empty-ico">🗓️</span>这一天还没有安排<br><button class="btn small" data-modal="todo" data-date="${date}" style="margin-top:8px">＋ 添加</button></div>` : ""}
-  </div>`;
-}
-function renderSchedule() {
-  const today = todayISO();
-  const [y, m] = state.calMonth.split("-").map(Number);
-  $("#calTitle").textContent = `${y} 年 ${m} 月`;
-  const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-  const days = new Date(y, m, 0).getDate();
-  let cells = "";
-  for (let i = 0; i < lead; i++) cells += `<div class="cal-cell empty"></div>`;
-  for (let d = 1; d <= days; d++) {
-    const ds = `${state.calMonth}-${String(d).padStart(2, "0")}`;
-    const ts = state.db.todos.filter((t) => t.date === ds);
-    const done = ts.filter((t) => t.done).length;
-    cells += `<button type="button" class="cal-cell ${ds === today ? "today" : ""} ${state.schedTab === "date" && state.schedDate === ds ? "selected" : ""}" data-date="${ds}" aria-label="${ds}，${done}/${ts.length} 项完成" aria-pressed="${(state.schedTab === "date" && state.schedDate === ds) || (state.schedTab === "today" && ds === today)}" ${ds === today ? 'aria-current="date"' : ""}>
-      <span class="cal-day">${d}</span>
-      ${ts.length ? `<span class="cal-badge ${done === ts.length ? "all-done" : ""}">${done}/${ts.length}</span>` : ""}
-    </button>`;
-  }
-  $("#calendar").innerHTML = `<div class="cal-head">${["一", "二", "三", "四", "五", "六", "日"].map((w) => `<div>${w}</div>`).join("")}</div><div class="cal-grid">${cells}</div>`;
-
-  let list = state.db.todos, title = "";
-  if (state.schedTab === "today") { list = list.filter((t) => t.date === today); title = "今天"; }
-  else if (state.schedTab === "week") { const mon = mondayOf(today); list = list.filter((t) => t.date >= mon && t.date <= addDays(mon, 6)); title = `本周（${mon} ~ ${addDays(mon, 6)}）`; }
-  else if (state.schedTab === "undone") { list = list.filter((t) => !t.done); title = "未完成事项"; }
-  else if (state.schedTab === "done") { list = list.filter((t) => t.done); title = "已完成事项"; }
-  else if (state.schedTab === "date") { list = list.filter((t) => t.date === state.schedDate); title = fmtCN(state.schedDate); }
-  else title = "全部日程";
-  list = sortBy(list, ["date", "start"]);
-
-  let html = "";
-  if (state.schedTab === "date" || state.schedTab === "today") {
-    const date = state.schedTab === "today" ? today : state.schedDate;
-    html = dayViewHTML(list.filter((t) => t.date === date), date);
-  } else {
-    const groups = {};
-    list.forEach((t) => (groups[t.date] = groups[t.date] || []).push(t));
-    const seen = new Set();
-    for (const t of list) {
-      if (seen.has(t.date)) continue;
-      seen.add(t.date);
-      html += `<div class="date-group"><div class="date-group-title">${t.date === today ? "今天" : fmtCN(t.date)}</div>${groups[t.date].map(todoItemHTML).join("")}</div>`;
-    }
-    html = html ? `<div class="date-group-title">${title} · 共 ${list.length} 项</div>${html}` : "";
-  }
-  $("#todoList").innerHTML = html || `<div class="empty"><span class="empty-ico">🗓️</span>${title}：暂无事项<br><button class="btn small" data-modal="todo" style="margin-top:8px">＋ 添加</button></div>`;
-
-  const undonePast = state.db.todos.filter((t) => !t.done && t.date < today).length;
-  $("#carryBtn").style.display = undonePast ? "" : "none";
-  $("#carryBtn").textContent = `⏩ 顺延（${undonePast}）`;
 }
 
 /* ================= 课程 ================= */
@@ -857,16 +660,12 @@ function tripDetailHTML(trip) {
 /* ================= 回顾 ================= */
 function buildReview(date) {
   const db = state.db;
-  const todos = db.todos.filter((t) => t.date === date);
   const subjPts = [];
   (db.subjects || []).forEach((sub) => (sub.points || []).forEach((p) => { if (p.date === date) subjPts.push({ course: sub.name, topic: p.title, detail: p.detail }); }));
   const trans = db.transactions.filter((t) => t.date === date);
   const exp = sum(trans.filter((t) => t.type === "expense"), (t) => t.amount);
   const inc = sum(trans.filter((t) => t.type === "income"), (t) => t.amount);
-  const L = [`# ${date} 每日回顾`, "", "## 待办"];
-  if (todos.length) todos.slice().sort((a, b) => (a.start || "99").localeCompare(b.start || "99")).forEach((t) => L.push(`- [${t.done ? "✓" : " "}] ${t.start ? t.start + " " : ""}${t.title}${t.priority === "high" ? "（高优）" : ""}`));
-  else L.push("-（无记录）");
-  L.push("", "## 课程");
+  const L = [`# ${date} 每日回顾`, "", "## 课程"];
   if (subjPts.length) subjPts.forEach((p) => {
     L.push(`- ${p.course}｜${p.topic}`);
     if (p.detail) L.push(`  - ${p.detail.split("\n")[0]}`);
@@ -902,8 +701,6 @@ function renderWeekly() {
   const weekNo = Math.ceil(((d1 - new Date(d1.getFullYear(), 0, 1)) / 86400000 + new Date(d1.getFullYear(), 0, 1).getDay()) / 7);
   $("#weekLabel").textContent = `${d1.getFullYear()} 年第 ${weekNo} 周（${mon.slice(5)} ~ ${sun.slice(5)}）`;
 
-  const todos = state.db.todos.filter((t) => t.date >= mon && t.date <= sun);
-  const doneCnt = todos.filter((t) => t.done).length;
   const trans = state.db.transactions.filter((t) => t.date >= mon && t.date <= sun);
   const exp = sum(trans.filter((t) => t.type === "expense"), (t) => t.amount);
   const inc = sum(trans.filter((t) => t.type === "income"), (t) => t.amount);
@@ -913,8 +710,7 @@ function renderWeekly() {
   trans.filter((t) => t.type === "expense").forEach((t) => (byCat[t.category] = (byCat[t.category] || 0) + Number(t.amount)));
   const topCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5);
   $("#weeklyContent").innerHTML = `
-    <div class="stats-grid stats-3">
-      <div class="stat-card"><div class="stat-ico">✅</div><div><div class="label">完成任务</div><div class="value">${doneCnt} / ${todos.length}</div><div class="sub">完成率 ${todos.length ? Math.round(doneCnt / todos.length * 100) : 0}%</div></div></div>
+    <div class="stats-grid stats-2">
       <div class="stat-card"><div class="stat-ico">💰</div><div><div class="label">本周支出</div><div class="value red">${money(exp)}</div><div class="sub">收入 ${money(inc)}</div></div></div>
       <div class="stat-card"><div class="stat-ico">📚</div><div><div class="label">课程总结</div><div class="value">${pointCnt} 篇</div><div class="sub">${[...subjNames].map(esc).join("、") || "暂无"}</div></div></div>
     </div>
@@ -922,10 +718,10 @@ function renderWeekly() {
       <div class="panel"><div class="panel-head"><h3>支出 Top 分类</h3></div>
         ${topCats.length ? topCats.map(([c, v]) => `<div class="legend-row"><span>${esc(c)}</span><b>${money(v)}</b></div>`).join("") : '<div class="empty">本周暂无支出</div>'}
       </div>
-      <div class="panel"><div class="panel-head"><h3>每日概览</h3></div>
+      <div class="panel"><div class="panel-head"><h3>每日收支</h3></div>
         ${days.map((d) => {
-          const dt = state.db.todos.filter((t) => t.date === d);
-          return `<div class="legend-row"><span>${fmtCN(d)}</span><b>完成 ${dt.filter((t) => t.done).length}/${dt.length}</b></div>`;
+          const daily = trans.filter((t) => t.date === d);
+          return `<div class="legend-row"><span>${fmtCN(d)}</span><b>支出 ${money(sum(daily.filter((t) => t.type === "expense"), (t) => t.amount))} · 收入 ${money(sum(daily.filter((t) => t.type === "income"), (t) => t.amount))}</b></div>`;
         }).join("")}
       </div>
     </div>`;
@@ -933,12 +729,7 @@ function renderWeekly() {
 
 /* ================= 示例数据 ================= */
 function loadSample() {
-  const t = todayISO(), y = addDays(t, -1);
-  state.db.todos.push(
-    { id: uid(), date: t, start: "08:30", end: "09:20", title: "高等数学 第 3 章复习", priority: "high", done: false, note: "重点看微分中值定理" },
-    { id: uid(), date: t, start: "14:00", end: "15:30", title: "科研组会", priority: "normal", done: true, note: "" },
-    { id: uid(), date: y, start: "19:00", end: "20:00", title: "英语阅读打卡", priority: "low", done: false, note: "" },
-  );
+  const t = todayISO();
   migrateSubjects(state.db);
   if (!state.db.subjects.some((x) => x.name === "高等数学")) {
     state.db.subjects.push({
@@ -977,44 +768,6 @@ function exportCSV() {
 }
 
 /* ================= 表单提交 ================= */
-function submitTodo() {
-  if (!validateTime("todoStart") || !validateTime("todoEnd")) {
-    alert("时间填写有误：时（0-23）和分（0-59）需成对填写，或都留空表示不限。");
-    return false;
-  }
-  const id = $("#todoId").value;
-  const data = { date: $("#todoDate").value, start: $("#todoStart").value, end: $("#todoEnd").value, title: $("#todoTitle").value.trim(), priority: segVal("todoPrioritySeg"), note: $("#todoNote").value.trim() };
-  if (!data.title) return false;
-  if (data.start && data.end && data.end <= data.start) { alert("结束时间需要晚于开始时间"); return false; }
-  const repeat = $("#todoRepeat").value;
-  let count = 1;
-  if (repeat) {
-    count = Math.floor(Number($("#todoRepeatCount").value) || 0);
-    if (count < 2 || count > 60) { alert("重复次数需在 2-60 之间"); return false; }
-  }
-  let info = null;
-  if (id) {
-    const t = state.db.todos.find((x) => x.id === id);
-    if (!t) return false;
-    if (repeat) {
-      if (t.seriesId) state.db.todos = state.db.todos.filter((x) => !(x.seriesId === t.seriesId && x.id !== t.id));
-      const seriesId = t.seriesId || uid();
-      Object.assign(t, data, { repeat, seriesId });
-      for (let i = 1; i < count; i++) state.db.todos.push({ id: uid(), done: false, ...data, date: nextRepeatDate(data.date, repeat, i), repeat, seriesId });
-      info = { repeat, count, first: data.date, last: nextRepeatDate(data.date, repeat, count - 1) };
-    } else {
-      Object.assign(t, data);
-      if (t.repeat) { t.repeat = ""; t.seriesId = ""; } // 脱离系列，成为独立日程
-    }
-  } else if (!repeat) {
-    state.db.todos.push({ id: uid(), done: false, ...data });
-  } else {
-    const seriesId = uid();
-    for (let i = 0; i < count; i++) state.db.todos.push({ id: uid(), done: false, ...data, date: nextRepeatDate(data.date, repeat, i), repeat, seriesId });
-    info = { repeat, count, first: data.date, last: nextRepeatDate(data.date, repeat, count - 1) };
-  }
-  return info || true;
-}
 function submitDeadline() {
   const id = $("#deadlineId").value;
   if (!validateTime("ddlTime")) { alert("时间填写有误：时（0-23）和分（0-59）需成对填写，或都留空。"); return false; }
@@ -1123,17 +876,12 @@ function bindEvents() {
   });
 
   $("#modalBody").addEventListener("focusout", (e) => {
-    if (/^(todo(Start|End)|ddlTime)[HM]$/.test(e.target.id)) normalizeTimeInput(e.target);
+    if (/^ddlTime[HM]$/.test(e.target.id)) normalizeTimeInput(e.target);
   });
   $("#modalBody").addEventListener("submit", (e) => {
     e.preventDefault();
     const id = e.target.id;
-    if (id === "todoForm") {
-      const r = submitTodo();
-      if (r === false) return;
-      if (r && r.repeat) toast(`✅ 已创建 ${r.count} 条「${r.repeat}」日程：${r.first.slice(5)} ~ ${r.last.slice(5)}（可在月历/全部中查看）`);
-    }
-    else if (id === "deadlineForm") { if (submitDeadline() === false) return; }
+    if (id === "deadlineForm") { if (submitDeadline() === false) return; }
     else if (id === "transForm") submitTrans();
     else if (id === "subjectForm") submitSubject();
     else if (id === "tripForm") submitTrip();
@@ -1151,7 +899,6 @@ function bindEvents() {
 
   // 弹窗字段与数据导入
   $("#modalBody").addEventListener("change", async (e) => {
-    if (e.target.id === "todoRepeat") { $("#todoRepeatCountWrap").hidden = !e.target.value; return; }
     if (e.target.id === "transDate") autoPickTrip(e.target.value);
     if (e.target.id === "importFile") {
       const f = e.target.files[0]; if (!f) return;
@@ -1174,7 +921,6 @@ function bindEvents() {
     if (open) {
       const type = open.dataset.modal;
       openModal(type);
-      if (open.dataset.date) $("#todoDate").value = open.dataset.date;
       return;
     }
     const goto = e.target.closest("[data-goto]");
@@ -1183,43 +929,11 @@ function bindEvents() {
     const el = e.target.closest("[data-action]");
     if (!el) return;
     const action = el.dataset.action;
-    const id = el.closest(".item, .tl-node, .mini-row")?.dataset.id;
+    const id = el.closest(".item, .mini-row")?.dataset.id;
     const db = state.db;
     const find = (arr) => arr.find((x) => x.id === id);
 
-    if (action === "toggleTodoBtn") { const t = find(db.todos); if (t) { t.done = !t.done; save(); render(); } return; }
-    if (action === "dayPrev" || action === "dayNext") {
-      const base = state.schedTab === "date" ? state.schedDate : todayISO();
-      state.schedDate = addDays(base, action === "dayPrev" ? -1 : 1);
-      state.schedTab = "date";
-      state.calMonth = state.schedDate.slice(0, 7);
-      $$("#schedTabs button").forEach((x) => x.classList.remove("active"));
-      renderSchedule();
-      return;
-    }
-    if (action === "editTodo") {
-      const t = find(db.todos); openModal("todo", true);
-      $("#todoId").value = t.id; $("#todoDate").value = t.date;
-      setTimeVal("todoStart", t.start || ""); setTimeVal("todoEnd", t.end || ""); $("#todoTitle").value = t.title; setSeg("todoPrioritySeg", t.priority); $("#todoNote").value = t.note || "";
-      const seriesLen = t.seriesId ? state.db.todos.filter((x) => x.seriesId === t.seriesId).length : 0;
-      $("#todoRepeat").value = t.repeat || "";
-      $("#todoRepeatCountWrap").hidden = !t.repeat;
-      $("#todoRepeatCount").value = t.repeat ? String(seriesLen || 8) : "";
-      $("#todoRepeatHint").hidden = !t.repeat;
-      $("#todoRepeatHint").textContent = t.repeat ? `该条属于重复系列（${t.repeat}，共 ${seriesLen} 条）。保持重复设置保存 = 重建整个系列；改为不重复 = 该条脱离系列成为独立日程（其余成员不变）。` : "";
-    } else if (action === "delTodo") {
-      const t = find(db.todos);
-      if (t && t.seriesId) {
-        const n = db.todos.filter((x) => x.seriesId === t.seriesId).length;
-        const pick = await choiceDialog(`删除「${esc(t.title)}」`, [
-          { label: `🗑 只删除这一条（${t.date}）` },
-          { label: `⚠️ 删除整个系列（共 ${n} 条）`, cls: "danger" },
-          { label: "取消", cls: "ghost" },
-        ]);
-        if (pick === 0) { db.todos = db.todos.filter((x) => x.id !== id); save(); render(); }
-        else if (pick === 1) { db.todos = db.todos.filter((x) => x.seriesId !== t.seriesId); save(); render(); toast(`已删除整个系列（${n} 条）`); }
-      } else if (confirm("删除这条待办？")) { db.todos = db.todos.filter((x) => x.id !== id); save(); render(); }
-    } else if (action === "openSubject") {
+    if (action === "openSubject") {
       const sub = subjById(el.closest("[data-sid]").dataset.sid);
       if (sub) { state.subjectTab = "points"; openWideModal(sub.name, subjectDetailHTML(sub)); }
     } else if (action === "editSubject") {
@@ -1302,33 +1016,6 @@ function bindEvents() {
       if (t) { t.done = e.target.checked; save(); render(); }
       return;
     }
-    if (e.target.dataset?.action === "toggleTodo") {
-      const id = e.target.closest(".item").dataset.id;
-      const t = state.db.todos.find((x) => x.id === id);
-      if (t) { t.done = e.target.checked; save(); render(); }
-    }
-  });
-
-  // 日程
-  $$("#schedTabs button").forEach((b) => b.addEventListener("click", () => {
-    state.schedTab = b.dataset.tab;
-    $$("#schedTabs button").forEach((x) => x.classList.toggle("active", x === b));
-    renderSchedule();
-  }));
-  $("#calPrevBtn").addEventListener("click", () => { state.calMonth = shiftMonth(state.calMonth, -1); renderSchedule(); });
-  $("#calNextBtn").addEventListener("click", () => { state.calMonth = shiftMonth(state.calMonth, 1); renderSchedule(); });
-  $("#calendar").addEventListener("click", (e) => {
-    const cell = e.target.closest(".cal-cell[data-date]");
-    if (!cell) return;
-    state.schedTab = "date"; state.schedDate = cell.dataset.date;
-    $$("#schedTabs button").forEach((x) => x.classList.remove("active"));
-    renderSchedule();
-    $("#todoList").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  $("#carryBtn").addEventListener("click", () => {
-    const t = todayISO(); let n = 0;
-    state.db.todos.forEach((x) => { if (!x.done && x.date < t) { x.date = t; x.carried = true; n++; } });
-    if (n) { save(); renderSchedule(); }
   });
 
   // 课程 / 记账筛选

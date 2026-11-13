@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>个人成长面板</title>
-  <link rel="stylesheet" href="style.css?v=20261113-save-guard1">
+  <link rel="stylesheet" href="style.css?v=20261113-without-schedule1">
 </head>
 <body>
 <div class="app">
@@ -12,7 +12,6 @@
     <div class="brand"><span class="logo">🌱</span><span>个人成长面板</span></div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-ico">☀️</span>今日</button>
-      <button data-view="schedule"><span class="nav-ico">🗓️</span>日程</button>
       <button data-view="course"><span class="nav-ico">📚</span>课程</button>
       <button data-view="finance"><span class="nav-ico">💰</span>记账</button>
       <button data-view="deadline"><span class="nav-ico">🎯</span>DDL</button>
@@ -42,47 +41,16 @@
           <div class="clock-sub muted" id="clockSub"></div>
         </div>
         <div class="hero-actions">
-          <button class="btn" data-modal="todo">＋ 日程</button>
+          <button class="btn" data-modal="deadline">＋ DDL</button>
           <button class="btn" data-modal="trans">＋ 记账</button>
         </div>
       </div>
-      <div id="dashStats" class="stats-grid stats-3"></div>
+      <div id="dashStats" class="stats-grid stats-2"></div>
       <div id="dashDdl"></div>
       <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-head"><h3>今日安排</h3><button class="btn small ghost" data-goto="schedule">查看日程 →</button></div>
-          <div id="dashTodos"></div>
-        </div>
-        <div class="dash-side">
-          <div class="panel"><div class="panel-head"><h3>💰 今日收支</h3></div><div id="dashFinance"></div></div>
-          <div class="panel"><div class="panel-head"><h3>📚 今日课程</h3></div><div id="dashCourses"></div></div>
-        </div>
+        <div class="panel"><div class="panel-head"><h3>💰 今日收支</h3></div><div id="dashFinance"></div></div>
+        <div class="panel"><div class="panel-head"><h3>📚 今日课程</h3></div><div id="dashCourses"></div></div>
       </div>
-    </section>
-
-    <section id="view-schedule" class="view">
-      <div class="panel">
-        <div class="toolbar schedule-toolbar">
-          <div class="month-nav">
-            <button class="icon-btn small" id="calPrevBtn" aria-label="上个月">◀</button>
-            <div id="calTitle" class="month-title"></div>
-            <button class="icon-btn small" id="calNextBtn" aria-label="下个月">▶</button>
-          </div>
-          <div class="tabs" id="schedTabs">
-            <button data-tab="today" class="active">今天</button>
-            <button data-tab="week">本周</button>
-            <button data-tab="undone">未完成</button>
-            <button data-tab="done">已完成</button>
-            <button data-tab="all">全部</button>
-          </div>
-          <div class="schedule-actions">
-            <button class="btn" id="carryBtn" title="把今天之前未完成的事项移到今天">⏩ 顺延</button>
-            <button class="btn primary" data-modal="todo">＋ 添加日程</button>
-          </div>
-        </div>
-        <div id="calendar" class="calendar"></div>
-      </div>
-      <div id="todoList"></div>
     </section>
 
     <section id="view-course" class="view">
@@ -161,9 +129,9 @@
   </div>
 </div>
 
-<script src="sync-core.js?v=20261113-save-guard1" defer></script>
-<script src="sync-client.js?v=20261113-save-guard1" defer></script>
-<script src="sync-ui.js?v=20261113-save-guard1" defer></script>
-<script src="app.js?v=20261113-save-guard1" defer></script>
+<script src="sync-core.js?v=20261113-without-schedule1" defer></script>
+<script src="sync-client.js?v=20261113-without-schedule1" defer></script>
+<script src="sync-ui.js?v=20261113-without-schedule1" defer></script>
+<script src="app.js?v=20261113-without-schedule1" defer></script>
 </body>
 </html>

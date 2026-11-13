@@ -61,7 +61,7 @@ async function openSyncPanel() {
 function openSyncConflicts() {
   const conflicts=DashboardSyncCore.conflicts(syncClient.doc);
   const contexts=conflicts.map(c=>DashboardSyncCore.clone(syncClient.doc.records[c.key]));
-  const names={todos:'日程',transactions:'收支',subjects:'课程',deadlines:'DDL',trips:'旅行',reviews:'回顾',settings:'设置',studies:'旧知识库',courses:'旧课程'};
+  const names={todos:'旧日程（已停用）',transactions:'收支',subjects:'课程',deadlines:'DDL',trips:'旅行',reviews:'回顾',settings:'设置',studies:'旧知识库',courses:'旧课程'};
   openWideModal('核对同时修改的记录',`<p class="muted">不同记录会自动合并。下面这些记录曾被两端同时修改，所有版本均已保留。暂不处理不会丢失任一版本；列表和统计暂显示其中一版。建议先导出完整备份。</p><button class="btn" id="conflictExportBtn">导出所有版本</button>${conflicts.length?conflicts.map((c,i)=>{
     const [table,id]=JSON.parse(c.key);
     return `<section class="conflict-card"><h3>${esc(names[table]||table)} · ${esc(id)}</h3>${c.versions.map((v,j)=>`<div class="conflict-version"><div class="muted small-text">${esc(v.at)} · ${esc(v.actor.slice(0,13))}</div><pre>${esc(v.value===null?'（已删除）':typeof v.value==='string'?v.value:JSON.stringify(v.value,null,2))}</pre><button class="btn small" data-resolve="${i}:${j}">${v.value===null?'确认删除':'采用这个版本'}</button></div>`).join('')}</section>`;
