@@ -622,7 +622,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .moment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .moment-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 20px 0 22px; }
 .moment-tools input { flex: 1 1 220px; }
-.moment-filters { display: flex; gap: 5px; flex-wrap: wrap; }
+.moment-filters { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.moment-filters select { width: auto; max-width: 150px; font-size: 13px; text-overflow: ellipsis; }
 .moment-filters button {
   padding: 6px 9px;
   min-height: 36px;
@@ -665,10 +666,28 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .moment-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; color: var(--muted); }
 .moment-card img { width: clamp(55px, 15vw, 90px); height: clamp(55px, 15vw, 90px); object-fit: cover; border-radius: 10px; }
 .moment-meta, .moment-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 12px; color: var(--muted); }
-.moment-category { border-radius: 6px; padding: 2px 7px; background: #fff0f2; color: #942f4e; }
-.moment-category.detail { color: #276456; background: #e6f2eb; }
-[data-theme="dark"] .moment-category { color: #ffb6ca; background: #472733; }
-[data-theme="dark"] .moment-category.detail { color: #a5dbc6; background: #213d34; }
+.moment-tag-input { display: flex; gap: 6px; }
+.moment-tag-input input { min-width: 0; }
+.moment-tag-input button { flex-shrink: 0; }
+.moment-tag-picker { display: flex; flex-wrap: wrap; gap: 5px; }
+#momentTagChoices { max-height: 120px; overflow-y: auto; }
+.moment-tag-label { margin: 3px 0 5px; }
+.moment-tag-chip {
+  min-height: 32px;
+  max-width: 100%;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.moment-tag-chip:hover { border-color: #a43d59; }
+.moment-tag-chip.selected { background: #fff0f2; border-color: #ead5da; color: #8f304a; }
+[data-theme="dark"] .moment-tag-chip.selected { background: #472733; border-color: #573945; color: #ffb6ca; }
 .moment-star { color: #a26700; }
 [data-theme="dark"] .moment-star { color: #f9c46a; }
 .moment-versions, .moment-error { color: var(--danger); }
@@ -682,6 +701,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 600px) {
   .moment-tools { margin-top: 14px; margin-bottom: 18px; }
   .moment-filters button { min-height: 40px; }
+  .moment-tag-chip { min-height: 38px; }
   .moment-card { padding: 12px; gap: 9px; }
   .moment-timeline { padding-left: 12px; }
   .moment-card::before { left: -17px; top: 20px; }

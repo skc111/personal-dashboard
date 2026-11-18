@@ -2,7 +2,7 @@
 const Moments = (() => {
   const vaultPrefix = "moments-vault-";
   const entryPrefix = "moments-note-";
-  const kinds = { together: "一起经历", detail: "想记住的细节" };
+  const maxTags = 8;
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
@@ -157,13 +157,26 @@ const Moments = (() => {
     return typeof photo === "string" && photo.length <= 165000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(photo);
   }
 
+  function knownTags() {
+    return [...new Set(entries.flatMap(({ record }) => record.tags).filter(Boolean))];
+  }
+
+  function updateTagFilter() {
+    const select = $("#momentTagFilter");
+    const selected = select.value;
+    select.replaceChildren(new Option("全部标签", ""), ...knownTags().map(tag => new Option(tag, tag)));
+    if ([...select.options].some(option => option.value === selected)) select.value = selected;
+  }
+
   function renderList() {
     const list = $("#momentList");
     if (!list) return;
     const query = $("#momentSearch").value.trim().toLowerCase();
+    const tag = $("#momentTagFilter").value;
     const results = entries.filter(({ record }) => {
-      const match = filter === "all" || (filter === "favorite" ? record.favorite : record.kind === filter);
-      return match && (!query || [record.title, record.body, record.date, ...record.tags].some(text => text.toLowerCase().includes(query)));
+      if (filter === "favorite" && !record.favorite) return false;
+      if (tag && !record.tags.includes(tag)) return false;
+      return !query || [record.title, record.body, record.date, ...record.tags].some(text => text.toLowerCase().includes(query));
     });
     $("#momentRandom").disabled = !entries.length;
     root().querySelectorAll("[data-moment-filter]").forEach(button => {
@@ -188,7 +201,7 @@ const Moments = (() => {
         <div class="moment-timeline">${group.map(({ name, record, conflict }) => `
           <button type="button" class="moment-card" data-moment-open="${esc(name)}">
             <span class="moment-card-text">
-              <span class="moment-meta"><time datetime="${esc(record.date)}">${Number(record.date.slice(8))} 日</time><span class="moment-category ${record.kind}">${kinds[record.kind]}</span>${record.favorite ? '<span class="moment-star" aria-label="已收藏">★</span>' : ""}${conflict ? '<span class="moment-versions">多个版本</span>' : ""}</span>
+              <span class="moment-meta"><time datetime="${esc(record.date)}">${Number(record.date.slice(8))} 日</time>${record.favorite ? '<span class="moment-star" aria-label="已收藏">★</span>' : ""}${conflict ? '<span class="moment-versions">多个版本</span>' : ""}</span>
               ${record.title ? `<strong>${esc(record.title)}</strong>` : ""}
               <span class="moment-preview">${esc(preview(record))}</span>
               ${record.tags.length ? `<span class="moment-tags">${record.tags.map(tag => `<span>#${esc(tag)}</span>`).join("")}</span>` : ""}
@@ -215,9 +228,8 @@ const Moments = (() => {
           <input id="momentSearch" type="search" aria-label="搜索点滴" placeholder="搜索标题、正文、标签…">
           <div class="moment-filters" aria-label="筛选点滴">
             <button type="button" data-moment-filter="all" aria-pressed="true">全部</button>
-            <button type="button" data-moment-filter="together" aria-pressed="false">一起经历</button>
-            <button type="button" data-moment-filter="detail" aria-pressed="false">想记住的细节</button>
             <button type="button" data-moment-filter="favorite" aria-pressed="false">★ 收藏</button>
+            <select id="momentTagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select>
           </div>
         </div>
         <p id="momentReadWarning" class="moment-error" role="status" hidden></p>
@@ -247,11 +259,12 @@ const Moments = (() => {
     const warning = $("#momentReadWarning");
     warning.hidden = !unavailable;
     warning.textContent = unavailable ? "有部分记录暂时无法读取。可重新解锁，或先导出完整备份。" : "";
+    updateTagFilter();
     renderList();
   }
 
   function validRecord(record) {
-    return record && Object.hasOwn(kinds, record.kind) &&
+    return record &&
       typeof record.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(record.date) &&
       typeof record.title === "string" && typeof record.body === "string" &&
       typeof record.created === "string" && Array.isArray(record.tags) && record.tags.every(tag => typeof tag === "string");
@@ -288,6 +301,62 @@ const Moments = (() => {
     throw Error("这张照片无法压缩，请试试另一张。");
   }
 
+  function bindTags(form, originalTags) {
+    const tags = [...new Set(originalTags)];
+    const history = knownTags();
+    const input = form.elements.tags;
+    const selected = form.querySelector("#momentSelectedTags");
+    const suggestions = form.querySelector("#momentTagSuggestions");
+    const choices = form.querySelector("#momentTagChoices");
+    const error = form.querySelector("#momentTagError");
+    const pending = () => input.value.split(/[,，]/).map(tag => tag.trim()).filter(Boolean);
+
+    function renderTags() {
+      const query = input.value.trim().toLowerCase();
+      const available = history.filter(tag => !tags.includes(tag) && tag.toLowerCase().includes(query));
+      selected.innerHTML = tags.map(tag => `
+        <button class="moment-tag-chip selected" type="button" data-remove-tag="${esc(tag)}" aria-label="移除标签 ${esc(tag)}">#${esc(tag)} <span aria-hidden="true">×</span></button>`).join("");
+      choices.innerHTML = available.map(tag => `
+        <button class="moment-tag-chip" type="button" data-add-tag="${esc(tag)}">#${esc(tag)}</button>`).join("");
+      suggestions.hidden = !available.length;
+    }
+
+    function addTags(additions) {
+      const combined = [...new Set([...tags, ...additions])];
+      error.hidden = combined.length <= maxTags;
+      if (!error.hidden) return false;
+      tags.splice(0, tags.length, ...combined);
+      input.value = "";
+      renderTags();
+      return true;
+    }
+
+    input.addEventListener("input", () => { error.hidden = true; renderTags(); });
+    input.addEventListener("keydown", event => {
+      if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      addTags(pending());
+    });
+    form.querySelector("#momentAddTag").onclick = () => addTags(pending());
+    choices.onclick = event => {
+      const option = event.target.closest("[data-add-tag]");
+      if (!option) return;
+      if (addTags([option.dataset.addTag]) && event.detail === 0) {
+        (choices.querySelector("button") || input).focus();
+      }
+    };
+    selected.onclick = event => {
+      const option = event.target.closest("[data-remove-tag]");
+      if (!option) return;
+      tags.splice(tags.indexOf(option.dataset.removeTag), 1);
+      error.hidden = true;
+      renderTags();
+      if (event.detail === 0) (selected.querySelector("button") || input).focus();
+    };
+    renderTags();
+    return () => addTags(pending()) ? tags.slice() : null;
+  }
+
   function openEditor(entry) {
     if (!keys.size) return;
     const editing = entry?.record;
@@ -299,14 +368,23 @@ const Moments = (() => {
     openWideModal(editing ? "编辑点滴" : "新的点滴", `
       <form id="momentEditor" data-private-moment>
         <div class="row2">
-          <label class="field">类别<select name="kind">
-            <option value="together">一起经历</option><option value="detail">想记住的细节</option>
-          </select></label>
           <label class="field">日期<input name="date" type="date" required value="${esc(editing?.date || todayISO())}"></label>
+          <label class="field">标题（选填）<input name="title" maxlength="80" value="${esc(editing?.title || "")}" placeholder="给它起个好找的名字"></label>
         </div>
-        <label class="field">标题（选填）<input name="title" maxlength="80" value="${esc(editing?.title || "")}" placeholder="给它起个好找的名字"></label>
         <label class="field">想记下来<textarea name="body" required maxlength="6000" rows="5" placeholder="当时发生了什么？有什么小细节想留住？">${esc(editing?.body || "")}</textarea></label>
-        <label class="field">标签（选填，用逗号隔开）<input name="tags" maxlength="150" value="${esc(editing?.tags.join("，") || "")}" placeholder="例如 美食，第一次"></label>
+        <div class="field">
+          <label for="momentTagInput">标签（选填）</label>
+          <div class="moment-tag-input">
+            <input id="momentTagInput" name="tags" maxlength="150" placeholder="输入新标签，或查找用过的标签" autocomplete="off">
+            <button class="btn" id="momentAddTag" type="button">添加</button>
+          </div>
+          <p class="moment-error" id="momentTagError" role="status" hidden>每条最多 ${maxTags} 个标签。</p>
+          <div id="momentSelectedTags" class="moment-tag-picker" aria-label="已添加的标签"></div>
+          <div id="momentTagSuggestions" hidden>
+            <div class="moment-tag-label">用过的标签</div>
+            <div id="momentTagChoices" class="moment-tag-picker"></div>
+          </div>
+        </div>
         <div class="moment-photo-field">
           <label class="field">照片（选填）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
           <div class="moment-photo-preview" ${photo ? "" : "hidden"}><img alt="所选照片"><button type="button" class="btn small" data-remove-photo>移除照片</button></div>
@@ -316,7 +394,7 @@ const Moments = (() => {
         <div class="modal-actions"><button class="btn ghost" type="button" data-close>取消</button><button class="btn primary moment-primary" type="submit">保存</button></div>
       </form>`);
     const form = $("#momentEditor");
-    form.elements.kind.value = editing?.kind || (filter === "detail" ? "detail" : "together");
+    const collectTags = bindTags(form, editing?.tags || []);
     const photoPreview = form.querySelector(".moment-photo-preview");
     const button = form.querySelector("button[type=submit]");
     const message = form.querySelector(".moment-error");
@@ -363,10 +441,12 @@ const Moments = (() => {
       if (button.disabled) return;
       const body = form.elements.body.value.trim();
       if (!body) { showError("写下一句话即可保存。"); return; }
+      const tags = collectTags();
+      if (!tags) return;
       const record = {
-        kind: form.elements.kind.value, date: form.elements.date.value,
-        title: form.elements.title.value.trim(), body,
-        tags: [...new Set(form.elements.tags.value.split(/[,，]/).map(tag => tag.trim()).filter(Boolean))].slice(0, 8),
+        // Older apps require this field to read the record. The current UI uses tags only.
+        kind: editing?.kind === "detail" ? "detail" : "together",
+        date: form.elements.date.value, title: form.elements.title.value.trim(), body, tags,
         favorite: form.elements.favorite.checked, photo, created
       };
       button.disabled = true;
@@ -393,7 +473,7 @@ const Moments = (() => {
   }
 
   function detailBody(record) {
-    return `<p class="moment-meta"><time>${esc(fmtCN(record.date))}</time><span class="moment-category ${record.kind}">${kinds[record.kind]}</span>${record.favorite ? '<span class="moment-star" aria-label="已收藏">★</span>' : ""}</p>
+    return `<p class="moment-meta"><time>${esc(fmtCN(record.date))}</time>${record.favorite ? '<span class="moment-star" aria-label="已收藏">★</span>' : ""}</p>
       <div class="moment-body">${esc(record.body)}</div>
       ${record.tags.length ? `<p class="moment-tags">${record.tags.map(tag => `<span>#${esc(tag)}</span>`).join("")}</p>` : ""}
       ${validPhoto(record.photo) ? `<img class="moment-detail-photo" src="${record.photo}" alt="记录照片">` : ""}`;
@@ -402,7 +482,7 @@ const Moments = (() => {
   function openDetail(entry) {
     if (!keys.size) return;
     const { name, record, conflict } = entry;
-    openWideModal(record.title || kinds[record.kind], `
+    openWideModal(record.title || "点滴记录", `
       <div data-private-moment>
         ${detailBody(record)}
         <div class="modal-actions">
@@ -435,7 +515,7 @@ const Moments = (() => {
       if (packet === null) return { version, summary: "<p>此版本删除了记录。</p>" };
       try {
         const value = await unseal(keys.get(packet.vault), name, packet);
-        if (validRecord(value)) return { version, summary: `<h4>${esc(value.title || kinds[value.kind])}</h4>${detailBody(value)}` };
+        if (validRecord(value)) return { version, summary: `<h4>${esc(value.title || "点滴记录")}</h4>${detailBody(value)}` };
       } catch {}
       return { version, summary: "<p>此版本需要另一把密码才能查看。</p>", unreadable: true };
     }));
@@ -466,6 +546,9 @@ const Moments = (() => {
     root().addEventListener("input", event => {
       if (event.target.id === "momentSearch") renderList();
     });
+    root().addEventListener("change", event => {
+      if (event.target.id === "momentTagFilter") renderList();
+    });
     root().addEventListener("click", event => {
       const button = event.target.closest("button");
       if (!button || !keys.size) return;
@@ -473,7 +556,10 @@ const Moments = (() => {
       if (button.hasAttribute("data-moment-new")) { openEditor(); return; }
       if (button.hasAttribute("data-moment-filter")) {
         filter = button.dataset.momentFilter;
-        if (button.hasAttribute("data-clear-search")) $("#momentSearch").value = "";
+        if (button.hasAttribute("data-clear-search")) {
+          $("#momentSearch").value = "";
+          $("#momentTagFilter").value = "";
+        }
         renderList();
         return;
       }
