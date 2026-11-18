@@ -14,10 +14,10 @@
 
 | 你的设备 | 下载入口 | 基本要求 |
 | --- | --- | --- |
-| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.4/personal-dashboard-desktop-1.0.4.zip) | Python 3.10+；Windows 不需要 WSL |
-| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.4/personal-dashboard-android-1.0.4.zip) | Android 8.0+，较新的系统 WebView |
+| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.5/personal-dashboard-desktop-1.0.5.zip) | Python 3.10+；Windows 不需要 WSL |
+| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.5/personal-dashboard-android-1.0.5.zip) | Android 8.0+，较新的系统 WebView |
 
-以上直链对应 v1.0.4；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
+以上直链对应 v1.0.5；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
 
 ### Windows：双击启动
 
@@ -40,13 +40,13 @@ python3 launch.py
 
 ### 安卓：不依赖电脑
 
-1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.4.apk`**。
+1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.5.apk`**。
 2. 如果系统询问是否允许当前浏览器/文件管理器安装应用，按需允许。
 3. 打开「日常面板」即可开始记录；不设置同步也能使用。
 
 **电脑关机不影响安卓使用。** 卸载或清除应用数据前，务必先导出备份。
 
-**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.4 沿用旧版的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
+**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.5 沿用旧版的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
 
 v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、记账、DDL、回顾。旧日程只作为历史数据保留在原存储、完整导出和同步中，不再参与首页及新生成的回顾/周报；升级不删除旧记录。另补充电脑端仅保存在浏览器时的警告、紧急导出与关页提醒。
 

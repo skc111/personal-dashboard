@@ -847,7 +847,7 @@ function bindEvents() {
   $("#themeBtn").addEventListener("click", toggleTheme);
   $("#settingsBtn").addEventListener("click", () => openModal("settings"));
   $("#modalClose").addEventListener("click", closeModal);
-  $("#modalOverlay").addEventListener("click", (e) => { if (e.target === $("#modalOverlay")) closeModal(); });
+  // Keep outside taps from dismissing an editor with unsaved input.
   document.addEventListener("keydown", (e) => {
     if ($("#modalOverlay").hidden) return;
     if (e.key === "Escape") { e.preventDefault(); closeModal(); return; }
