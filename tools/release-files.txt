@@ -28,6 +28,7 @@ server.py
 start.sh
 static/app.js
 static/index.html
+static/moments.js
 static/style.css
 static/sync-client.js
 static/sync-core.js
@@ -37,6 +38,7 @@ sync_validation.py
 tests/browser-server.cjs
 tests/browser-smoke.cjs
 tests/mobile-layout.cjs
+tests/moments.cjs
 tests/sync-core.test.js
 tests/sync-integration.cjs
 tests/test_git_workflow.py

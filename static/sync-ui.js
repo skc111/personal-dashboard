@@ -44,7 +44,7 @@ async function openSyncPanel() {
       <div class="sync-buttons"><button class="btn primary" type="submit" id="syncEnableBtn">${c.enabled?'保存连接并同步':'连接并开启同步'}</button><button class="btn" type="button" id="syncNowBtn" ${c.enabled?'':'disabled'}>立即同步</button><button class="btn ghost" type="button" id="syncPauseBtn" ${c.enabled?'':'disabled'}>暂停同步</button></div>
     </form>
     <div class="sync-buttons"><button class="btn" id="syncBackupBtn">导出完整备份</button><button class="btn" id="syncConflictBtn" hidden>核对冲突</button></div>
-    <p class="muted small-text">两端前台打开时约 15 秒检查一次；后台不保证即时同步，重新打开会补同步。免费额度由坚果云规定。同步内容存于你的坚果云账户，目前不提供端到端加密。密码只留在本设备，不会进入备份。</p>
+    <p class="muted small-text">两端前台打开时约 15 秒检查一次；后台不保证即时同步，重新打开会补同步。免费额度由坚果云规定。同步内容存于你的坚果云账户。「点滴」内容会加密，其他模块的记录按原样存储。同步凭据只留在本设备。</p>
   `);
   renderSyncStatus(syncUIStatus);
   const form=document.getElementById('syncConfigForm');
@@ -60,15 +60,23 @@ async function openSyncPanel() {
 }
 function openSyncConflicts() {
   const conflicts=DashboardSyncCore.conflicts(syncClient.doc);
-  const contexts=conflicts.map(c=>DashboardSyncCore.clone(syncClient.doc.records[c.key]));
+  const privateConflict = conflict => {
+    const [table, name] = JSON.parse(conflict.key);
+    return table === 'settings' && Moments.isPrivateName(name);
+  };
+  const hasPrivateConflicts = conflicts.some(privateConflict);
+  const visibleConflicts = conflicts.filter(conflict => !privateConflict(conflict));
+  const contexts=visibleConflicts.map(c=>DashboardSyncCore.clone(syncClient.doc.records[c.key]));
   const names={todos:'旧日程（已停用）',transactions:'收支',subjects:'课程',deadlines:'DDL',trips:'旅行',reviews:'回顾',settings:'设置',studies:'旧知识库',courses:'旧课程'};
-  openWideModal('核对同时修改的记录',`<p class="muted">不同记录会自动合并。下面这些记录曾被两端同时修改，所有版本均已保留。暂不处理不会丢失任一版本；列表和统计暂显示其中一版。建议先导出完整备份。</p><button class="btn" id="conflictExportBtn">导出所有版本</button>${conflicts.length?conflicts.map((c,i)=>{
+  openWideModal('核对同时修改的记录',`<p class="muted">不同记录会自动合并。下面这些记录曾被两端同时修改，所有版本均已保留。暂不处理不会丢失任一版本；列表和统计暂显示其中一版。建议先导出完整备份。</p><button class="btn" id="conflictExportBtn">导出所有版本</button>${hasPrivateConflicts ? '<p><button class="btn" id="syncOpenMoments">前往「点滴」核对私密记录</button></p>' : ''}${visibleConflicts.length?visibleConflicts.map((c,i)=>{
     const [table,id]=JSON.parse(c.key);
     return `<section class="conflict-card"><h3>${esc(names[table]||table)} · ${esc(id)}</h3>${c.versions.map((v,j)=>`<div class="conflict-version"><div class="muted small-text">${esc(v.at)} · ${esc(v.actor.slice(0,13))}</div><pre>${esc(v.value===null?'（已删除）':typeof v.value==='string'?v.value:JSON.stringify(v.value,null,2))}</pre><button class="btn small" data-resolve="${i}:${j}">${v.value===null?'确认删除':'采用这个版本'}</button></div>`).join('')}</section>`;
-  }).join(''):'<div class="empty">没有需要核对的记录</div>'}`);
+  }).join(''):hasPrivateConflicts ? '' : '<div class="empty">没有需要核对的记录</div>'}`);
+  const momentsButton = document.getElementById('syncOpenMoments');
+  if (momentsButton) momentsButton.onclick = () => { closeModal(); switchView('moments'); };
   document.getElementById('conflictExportBtn').onclick=()=>exportFullBackup().catch(e=>toast(e.message));
   document.querySelectorAll('[data-resolve]').forEach(b=>b.onclick=async()=>{
-    const [i,j]=b.dataset.resolve.split(':').map(Number),c=conflicts[i];
+    const [i,j]=b.dataset.resolve.split(':').map(Number),c=visibleConflicts[i];
     if(!confirm('采用所选版本并结束这次冲突？其他版本会从待核对列表移除，建议先导出备份。'))return;
     b.disabled=true;try{await syncClient.resolve(c.key,{context:contexts[i],value:c.versions[j].value});openSyncConflicts();}catch(e){toast(e.message);b.disabled=false;}
   });

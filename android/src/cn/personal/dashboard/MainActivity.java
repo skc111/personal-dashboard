@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
                 Uri uri=request.getUrl();String path=uri.getPath();
                 if("https".equals(uri.getScheme())&&"appassets.androidplatform.net".equals(uri.getHost())&&path!=null&&path.startsWith("/assets/")) {
                     String name=path.substring(8);
-                    if(Arrays.asList("index.html","app.js","style.css","sync-core.js","sync-client.js","sync-ui.js").contains(name)) {
+                    if(Arrays.asList("index.html","app.js","style.css","sync-core.js","sync-client.js","sync-ui.js","moments.js").contains(name)) {
                         try {
                             String mime=name.endsWith(".html")?"text/html":name.endsWith(".css")?"text/css":"application/javascript";
                             Map<String,String> headers=new HashMap<>();headers.put("Cache-Control","no-store");headers.put("X-Content-Type-Options","nosniff");
@@ -111,7 +111,13 @@ public class MainActivity extends Activity {
             @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> callback,FileChooserParams p) {
                 if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
-                i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/json","text/plain","application/octet-stream"});
+                boolean photo=Arrays.stream(p.getAcceptTypes()).anyMatch(type->type.startsWith("image/"));
+                if(photo){
+                    i.setType("image/*");
+                    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/jpeg","image/png","image/webp"});
+                } else {
+                    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/json","text/plain","application/octet-stream"});
+                }
                 try{startActivityForResult(i,IMPORT);}catch(Exception e){fileCallback.onReceiveValue(null);fileCallback=null;}return true;
             }
             @Override public boolean onJsAlert(WebView v,String u,String message,JsResult result){

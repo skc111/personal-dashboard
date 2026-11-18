@@ -277,6 +277,10 @@ function openModal(type, editing = false) {
 function closeModal() {
   if ($("#modalOverlay").hidden) return;
   if ($("#modalOverlay").contains(document.activeElement)) document.activeElement.blur();
+  if ($("#modalBody [data-private-moment]")) {
+    $("#modalBody").replaceChildren();
+    $("#modalTitle").textContent = "";
+  }
   $("#modalOverlay").hidden = true; modalType = null; $(".modal").classList.remove("wide", "compact");
   document.body.classList.remove("modal-open");
   document.documentElement.classList.remove("modal-open");
@@ -319,10 +323,12 @@ function fillSettings() {
 }
 
 /* ================= 视图 ================= */
-const TITLES = { dashboard: "今日", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", review: "回顾" };
+const TITLES = { dashboard: "今日", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", review: "回顾", moments: "点滴" };
 function switchView(view) {
   if (!Object.hasOwn(TITLES, view)) view = "dashboard";
+  const leavingMoments = state.view === "moments" && view !== "moments";
   state.view = view;
+  if (leavingMoments) Moments.lock();
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + view));
   $$("#nav button, #bottomNav button").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === view);
@@ -334,7 +340,7 @@ function switchView(view) {
   window.scrollTo(0, 0);
 }
 function render() {
-  ({ dashboard: renderDashboard, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, review: renderReview }[state.view] || renderDashboard)();
+  ({ dashboard: renderDashboard, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, review: renderReview, moments: Moments.render }[state.view] || renderDashboard)();
 }
 
 /* ================= 今日 ================= */
@@ -1082,6 +1088,7 @@ window.addEventListener("error", (e) => {
   $("#financeMonth").value = state.financeMonth;
   $("#reviewDate").value = todayISO();
   bindEvents();
+  Moments.bind();
   initViewportLayout();
   render();
   syncClient.status();

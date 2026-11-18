@@ -1,10 +1,10 @@
 {
   "name": "personal-dashboard",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "test": "node tests/sync-core.test.js",
-    "test:browser": "node tests/browser-smoke.cjs && node tests/sync-integration.cjs && node tests/mobile-layout.cjs"
+    "test:browser": "node tests/browser-smoke.cjs && node tests/sync-integration.cjs && node tests/mobile-layout.cjs && node tests/moments.cjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

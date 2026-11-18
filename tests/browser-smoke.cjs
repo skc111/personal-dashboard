@@ -13,7 +13,7 @@ const {startTestServer}=require('./browser-server.cjs');
   await page.evaluate(async()=>{state.db.todos.push({id:'legacy-schedule',title:'旧日程只保留数据',date:todayISO(),start:'07:30',end:'08:00',done:false,note:'归档备注',repeat:'每周',seriesId:'legacy-series'});await save();});
   const legacy=await page.evaluate(()=>JSON.stringify(state.db.todos));
   assert.equal(await page.locator('[data-view="schedule"],#view-schedule,[data-modal="todo"],#dashTodos').count(),0);
-  assert.equal(await page.locator('#bottomNav button').count(),5);
+  assert.equal(await page.locator('#bottomNav button').count(),6);
   assert(!await page.locator('#view-dashboard').textContent().then(s=>s.includes('旧日程只保留数据')));
   await page.locator('.hero [data-modal="deadline"]').click();await page.locator('#ddlTitle').fill('同步测试-DDL');await page.locator('#ddlTimeH').fill('7');await page.locator('#ddlTimeM').fill('30');await page.locator('#ddlNote').fill('第一行\n第二行');await page.locator('#deadlineForm [type=submit]').click();
   await page.waitForFunction(()=>state.db.deadlines.some(t=>t.title==='同步测试-DDL')&&syncClient.localWrites===0&&!syncClient.localRunning);
@@ -61,10 +61,10 @@ const {startTestServer}=require('./browser-server.cjs');
   assert.equal(await page.evaluate(()=>window.testConfirmedCloud),false);
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:require('node:path').join(fixture.dir,'home.png'),fullPage:true});
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false);
-  for(const view of ['course','finance','deadline','review']){await page.locator(`#bottomNav [data-view="${view}"]`).click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'overflow in '+view);}
+  for(const view of ['course','finance','deadline','review','moments']){await page.locator(`#bottomNav [data-view="${view}"]`).click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'overflow in '+view);}
   await page.locator('#syncBadge').click();await page.screenshot({path:require('node:path').join(fixture.dir,'sync.png'),fullPage:true});
   assert.equal(await page.evaluate(()=>JSON.stringify(state.db.todos)),legacy);
-  assert.deepEqual(errors,[]);console.log('PASS fresh empty desktop, DDL create/reload, schedule UI removed with legacy data preserved, multitab, offline reload, 390px all five modules, sync settings; no JS errors');
+  assert.deepEqual(errors,[]);console.log('PASS fresh empty desktop, DDL create/reload, schedule UI removed with legacy data preserved, multitab, offline reload, 390px all six modules, sync settings; no JS errors');
   await context.close();
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

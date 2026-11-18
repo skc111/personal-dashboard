@@ -14,10 +14,10 @@
 
 | 你的设备 | 下载入口 | 基本要求 |
 | --- | --- | --- |
-| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.2/personal-dashboard-desktop-1.0.2.zip) | Python 3.10+；Windows 不需要 WSL |
-| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.2/personal-dashboard-android-1.0.2.zip) | Android 8.0+，较新的系统 WebView |
+| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.3/personal-dashboard-desktop-1.0.3.zip) | Python 3.10+；Windows 不需要 WSL |
+| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.3/personal-dashboard-android-1.0.3.zip) | Android 8.0+，较新的系统 WebView |
 
-以上直链对应 v1.0.2；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
+以上直链对应 v1.0.3；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
 
 ### Windows：双击启动
 
@@ -40,15 +40,17 @@ python3 launch.py
 
 ### 安卓：不依赖电脑
 
-1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.2.apk`**。
+1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.3.apk`**。
 2. 如果系统询问是否允许当前浏览器/文件管理器安装应用，按需允许。
 3. 打开「日常面板」即可开始记录；不设置同步也能使用。
 
 **电脑关机不影响安卓使用。** 卸载或清除应用数据前，务必先导出备份。
 
-**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.2 沿用 v1.0.0 / v1.0.1 的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
+**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.3 沿用旧版的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
 
 v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、记账、DDL、回顾。旧日程只作为历史数据保留在原存储、完整导出和同步中，不再参与首页及新生成的回顾/周报；升级不删除旧记录。另补充电脑端仅保存在浏览器时的警告、紧急导出与关页提醒。
+
+v1.0.3 新增「点滴」，支持密码解锁、按月浏览、关键词搜索、收藏和可选照片。初次使用请设置自己的密码。
 
 ## 可以做什么
 
@@ -59,6 +61,7 @@ v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、�
 | 记账 | 收入/支出、分类统计、日支出图、按城市分开的旅行账本、CSV 导出 |
 | 重要事项 | 截止日期与时间、完成状态、首页 DDL 提醒 |
 | 回顾与周报 | 生成并编辑每日回顾，查看每周统计 |
+| 点滴 | 记录一起经历的事和想记住的细节，解锁后浏览和编辑 |
 
 另有深色模式、JSON 备份与合并导入，以及可选的跨设备同步。
 
@@ -78,7 +81,7 @@ v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、�
 - 不同记录自动合并；同一记录的并发修改保留多个版本，提示核对。
 - 坚果云免费版有流量与请求频率限制，以服务商当前规则为准。
 
-> **朋友一定要用自己的账号。** 共用同一个账号和同步文件夹，会把彼此的记录合并。同步内容目前没有端到端加密，不要公开分享云目录。
+> **朋友一定要用自己的账号。** 共用同一个账号和同步文件夹，会把彼此的记录合并。「点滴」内容加密后同步。请私密保存云目录和备份，使用足够长的独立密码。
 
 ## 数据在哪里，如何备份
 

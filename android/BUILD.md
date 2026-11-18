@@ -18,7 +18,7 @@ ANDROID_LIBS=/path/to/jars \
 bash android/build.sh
 ```
 
-输出 `android/dist/personal-dashboard-1.0.2.apk`（文件名跟随 Manifest 的版本，构建前校验与 `package.json` 一致）。最低 Android 8.0，目标 API 35，签名 v2/v3。
+输出 `android/dist/personal-dashboard-1.0.3.apk`（文件名跟随 Manifest 的版本，构建前校验与 `package.json` 一致）。最低 Android 8.0，目标 API 35，签名 v2/v3。
 
 首次自行编译会生成自己的私密签名文件；`android/signing/` 必须留在本机。使用自己的密钥签名后不能直接覆盖他人签名的安装包，请先导出数据再迁移。
 
@@ -26,7 +26,7 @@ bash android/build.sh
 
 ```bash
 python3 tools/package_release.py --output ../release-artifacts \
-  --apk android/dist/personal-dashboard-1.0.2.apk
+  --apk android/dist/personal-dashboard-1.0.3.apk
 ```
 
 不要把编译目录、签名目录、用户 `data/` 放入仓库或发布包。第三方许可见仓库 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
