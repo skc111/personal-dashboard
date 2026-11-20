@@ -636,35 +636,59 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   cursor: pointer;
 }
 .moment-filters button[aria-pressed="true"] { color: var(--moment-strong); background: var(--moment-wash); border-color: var(--moment-line); font-weight: 700; }
-.moment-empty { display: grid; justify-items: center; gap: 10px; padding: 35px 12px; text-align: center; color: var(--muted); }
-.moment-empty strong { font-size: 16px; color: var(--text); }
-.moment-empty p { margin: 0; }
-.moment-month { margin: 0 0 24px; }
-.moment-month h3 { margin: 0 0 12px; font-size: 15px; color: var(--moment-strong); }
-.moment-timeline { display: grid; gap: 10px; margin-left: 6px; padding-left: 16px; border-left: 1px solid var(--moment-line); }
-.moment-card {
+.moment-calendar {
+  padding: clamp(12px, 3vw, 24px);
+  background: var(--panel);
+  border: 1px solid var(--moment-line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+.moment-calendar-head, .moment-calendar-nav, .moment-calendar-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.moment-calendar-head { justify-content: space-between; margin-bottom: 16px; }
+.moment-calendar-head h3 { margin: 0; font-size: clamp(19px, 3vw, 25px); color: var(--moment-strong); }
+.moment-calendar-nav { flex-wrap: nowrap; gap: 5px; }
+.moment-month-arrow { min-width: 36px; justify-content: center; font-size: 22px !important; line-height: 1; }
+.moment-calendar-nav button:disabled { opacity: .55; cursor: default; }
+.moment-weekdays, .moment-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(3px, 1vw, 8px); }
+.moment-weekdays { text-align: center; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+.moment-weekdays span:nth-last-child(-n + 2) { color: var(--moment-ink); }
+.moment-day {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 14px;
-  width: 100%;
-  padding: 15px 18px;
+  grid-template-rows: 25px 13px;
+  justify-items: center;
+  align-items: center;
+  align-content: center;
+  row-gap: 2px;
+  min-width: 0;
+  min-height: clamp(50px, 6vw, 68px);
+  padding: 3px 1px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--panel);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  text-align: left;
   font: inherit;
   cursor: pointer;
 }
-.moment-card:hover { border-color: var(--moment-ink); }
-.moment-card::before { content: ""; position: absolute; height: 7px; width: 7px; left: -21px; top: 23px; border-radius: 50%; background: var(--moment-ink); }
-.moment-card-text { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
-.moment-card-text > strong { font-size: 17px; }
-.moment-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; color: var(--muted); }
-.moment-card img { width: clamp(55px, 15vw, 90px); height: clamp(55px, 15vw, 90px); object-fit: cover; border-radius: 10px; }
+.moment-day-blank { background: var(--bg); border-radius: 12px; opacity: .6; }
+.moment-day:hover, .moment-day:focus-visible { border-color: var(--moment-ink); }
+.moment-day:focus-visible { outline: 2px solid var(--moment-ink); outline-offset: 1px; }
+.moment-day.has-records { background: var(--moment-wash); border-color: var(--moment-line); color: var(--moment-strong); }
+.moment-day.has-records:hover { border-color: var(--moment-ink); }
+.moment-day[aria-current="date"] { border-color: var(--moment-ink); }
+.moment-day-number { display: grid; place-items: center; min-width: 25px; height: 25px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.moment-day[aria-current="date"] .moment-day-number { background: #a43d59; color: #fff; border-radius: 50%; }
+.moment-day-marker { color: var(--moment-strong); font-size: 11px; font-weight: 750; line-height: 13px; }
+.moment-day-star { position: absolute; top: 3px; right: clamp(1px, .6vw, 7px); color: #9b6700; font-size: 10px; line-height: 1; }
+[data-theme="dark"] .moment-day-star { color: #f9c46a; }
+.moment-calendar-footer { margin-top: 14px; min-height: 36px; font-size: 13px; color: var(--muted); }
+.moment-calendar-footer select { width: auto; max-width: 100%; margin-left: auto; font-size: 13px; }
+.moment-day-pager { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; color: var(--muted); font-size: 13px; }
 .moment-meta, .moment-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 12px; color: var(--muted); }
 .moment-tag-input { display: flex; gap: 6px; }
 .moment-tag-input input { min-width: 0; }
@@ -699,10 +723,13 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .moment-check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
 .moment-check input { width: 18px; height: 18px; accent-color: #a43d59; }
 @media (max-width: 600px) {
-  .moment-tools { margin-top: 14px; margin-bottom: 18px; }
+  .moment-hero { padding: 13px 14px; gap: 8px; border-radius: 16px; }
+  .moment-hero h2 { font-size: 21px; }
+  .moment-tools { margin-top: 10px; margin-bottom: 12px; gap: 7px; }
   .moment-filters button { min-height: 40px; }
   .moment-tag-chip { min-height: 38px; }
-  .moment-card { padding: 12px; gap: 9px; }
-  .moment-timeline { padding-left: 12px; }
-  .moment-card::before { left: -17px; top: 20px; }
+  .moment-calendar-head { margin-bottom: 12px; }
+  .moment-calendar-nav .btn { padding-inline: 7px; }
+  .moment-day, .moment-day-blank { border-radius: 8px; }
+  .moment-calendar-footer select { margin-left: 0; }
 }

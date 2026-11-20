@@ -68,6 +68,8 @@ const Moments = (() => {
   let renderRequest = 0;
   let lockGeneration = 0;
   let filter = "all";
+  let calendarMonth = "";
+  let calendarDays = new Map();
   let randomized = "";
   let hiddenAt = 0;
   const root = () => $("#view-moments");
@@ -81,6 +83,8 @@ const Moments = (() => {
     keys.clear();
     entries = [];
     filter = "all";
+    calendarMonth = "";
+    calendarDays.clear();
     randomized = "";
     if ($("#modalBody [data-private-moment]")) closeModal();
     root().replaceChildren();
@@ -149,10 +153,6 @@ const Moments = (() => {
     }
   }
 
-  function preview(record) {
-    return record.body.replace(/\s+/g, " ").slice(0, record.title ? 128 : 170);
-  }
-
   function validPhoto(photo) {
     return typeof photo === "string" && photo.length <= 165000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(photo);
   }
@@ -168,56 +168,97 @@ const Moments = (() => {
     if ([...select.options].some(option => option.value === selected)) select.value = selected;
   }
 
-  function renderList() {
-    const list = $("#momentList");
-    if (!list) return;
+  function monthLabel(month) {
+    const [year, number] = month.split("-");
+    return `${year} 年 ${Number(number)} 月`;
+  }
+
+  function shiftedMonth(direction) {
+    const date = new Date(calendarMonth + "-01T12:00:00");
+    date.setMonth(date.getMonth() + direction);
+    const year = date.getFullYear();
+    if (year < 1 || year > 9999) return calendarMonth;
+    return `${String(year).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function renderCalendar(jumpToMatch = false) {
+    const grid = $("#momentCalendarGrid");
+    if (!grid) return;
+    const today = todayISO();
+    const currentMonth = today.slice(0, 7);
+    calendarMonth ||= currentMonth;
     const query = $("#momentSearch").value.trim().toLowerCase();
     const tag = $("#momentTagFilter").value;
-    const results = entries.filter(({ record }) => {
-      if (filter === "favorite" && !record.favorite) return false;
-      if (tag && !record.tags.includes(tag)) return false;
-      return !query || [record.title, record.body, record.date, ...record.tags].some(text => text.toLowerCase().includes(query));
-    });
+    const isFiltered = !!(query || tag || filter === "favorite");
+
+    calendarDays = new Map();
+    for (const entry of entries) {
+      const { record } = entry;
+      if (filter === "favorite" && !record.favorite) continue;
+      if (tag && !record.tags.includes(tag)) continue;
+      if (query && ![record.title, record.body, record.date, ...record.tags].some(text => text.toLowerCase().includes(query))) continue;
+      if (!calendarDays.has(record.date)) calendarDays.set(record.date, []);
+      calendarDays.get(record.date).push(entry);
+    }
+
+    const activeMonths = [...new Set([...calendarDays.keys()].map(day => day.slice(0, 7)))];
+    if (jumpToMatch && isFiltered && activeMonths.length && !activeMonths.includes(calendarMonth)) {
+      calendarMonth = activeMonths[0];
+    }
+
     $("#momentRandom").disabled = !entries.length;
     root().querySelectorAll("[data-moment-filter]").forEach(button => {
       button.setAttribute("aria-pressed", String(button.dataset.momentFilter === filter));
     });
-    if (!results.length) {
-      list.innerHTML = `<div class="moment-empty">
-        <strong>${entries.length ? "这里还没有符合条件的记录" : "从一个想留住的瞬间开始"}</strong>
-        ${entries.length ? '<button class="btn small" type="button" data-moment-filter="all" data-clear-search>查看全部</button>' : '<p>一起经历的小事，或想记在心里的细节。</p><button class="btn primary moment-primary" type="button" data-moment-new>写下第一条</button>'}
-      </div>`;
-      return;
-    }
-    const months = new Map();
-    for (const entry of results) {
-      const month = entry.record.date.slice(0, 7);
-      if (!months.has(month)) months.set(month, []);
-      months.get(month).push(entry);
-    }
-    list.innerHTML = [...months].map(([month, group]) => `
-      <section class="moment-month">
-        <h3>${esc(month.slice(0, 4))} 年 ${Number(month.slice(5))} 月</h3>
-        <div class="moment-timeline">${group.map(({ name, record, conflict }) => `
-          <button type="button" class="moment-card" data-moment-open="${esc(name)}">
-            <span class="moment-card-text">
-              <span class="moment-meta"><time datetime="${esc(record.date)}">${Number(record.date.slice(8))} 日</time>${record.favorite ? '<span class="moment-star" aria-label="已收藏">★</span>' : ""}${conflict ? '<span class="moment-versions">多个版本</span>' : ""}</span>
-              ${record.title ? `<strong>${esc(record.title)}</strong>` : ""}
-              <span class="moment-preview">${esc(preview(record))}</span>
-              ${record.tags.length ? `<span class="moment-tags">${record.tags.map(tag => `<span>#${esc(tag)}</span>`).join("")}</span>` : ""}
-            </span>
-            ${validPhoto(record.photo) ? `<img src="${record.photo}" alt="" loading="lazy">` : ""}
-          </button>`).join("")}</div>
-      </section>`).join("");
+    $("#momentMonthLabel").textContent = monthLabel(calendarMonth);
+    $("#momentPrevMonth").disabled = shiftedMonth(-1) === calendarMonth;
+    $("#momentNextMonth").disabled = shiftedMonth(1) === calendarMonth;
+    $("#momentToday").disabled = calendarMonth === currentMonth;
+
+    const first = new Date(calendarMonth + "-01T12:00:00");
+    const leading = (first.getDay() + 6) % 7;
+    const monthEnd = new Date(first);
+    monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const totalCells = Math.ceil((leading + daysInMonth) / 7) * 7;
+    let visibleCount = 0;
+    const focusedDate = grid.contains(document.activeElement) ? document.activeElement.dataset.momentDay : "";
+    grid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
+      const day = index - leading + 1;
+      if (day < 1 || day > daysInMonth) return '<span class="moment-day-blank" aria-hidden="true"></span>';
+      const date = calendarMonth + "-" + String(day).padStart(2, "0");
+      const notes = calendarDays.get(date) || [];
+      const favorite = notes.some(entry => entry.record.favorite);
+      visibleCount += notes.length;
+      const description = notes.length ? `${notes.length} 条记录${favorite ? "，有收藏" : ""}` : "添加记录";
+      return `<button type="button" class="moment-day${notes.length ? " has-records" : ""}" data-moment-day="${date}" data-moment-count="${notes.length}"
+        aria-label="${calendarMonth.slice(0, 4)}年${fmtCN(date)}，${description}" ${date === today ? 'aria-current="date"' : ""}>
+        <span class="moment-day-number">${day}</span>
+        ${favorite ? '<span class="moment-day-star" aria-hidden="true">★</span>' : ""}
+        ${notes.length ? `<span class="moment-day-marker" aria-hidden="true">${notes.length > 99 ? "99+" : notes.length > 1 ? notes.length : "•"}</span>` : ""}
+      </button>`;
+    }).join("");
+    if (focusedDate) [...grid.querySelectorAll("button")].find(button => button.dataset.momentDay === focusedDate)?.focus({ preventScroll: true });
+
+    $("#momentCalendarSummary").textContent = isFiltered
+      ? (visibleCount ? `本月匹配 ${visibleCount} 条` : "本月没有匹配的记录")
+      : (visibleCount ? `本月 ${visibleCount} 条记录` : "本月还没有记录");
+    $("#momentClearFilters").hidden = !isFiltered;
+
+    const jump = $("#momentMonthJump");
+    const otherMonths = activeMonths.filter(month => month !== calendarMonth);
+    jump.replaceChildren(new Option("跳到有记录的月份", ""), ...otherMonths.map(month => new Option(monthLabel(month), month)));
+    jump.hidden = !otherMonths.length;
   }
 
   async function render() {
     if (state.view !== "moments") return;
     if (!keys.size) { renderLocked(); return; }
-    if (!$("#momentList")) {
+    if (!$("#momentCalendarGrid")) {
+      calendarMonth = todayISO().slice(0, 7);
       root().innerHTML = `
         <header class="moment-hero">
-          <div><h2>我们的点滴</h2><p>一起经历的，想记住的。</p></div>
+          <h2>我们的点滴</h2>
           <div class="moment-actions">
             <button class="btn" type="button" id="momentRandom" disabled>翻一条旧回忆</button>
             <button class="btn" type="button" data-moment-lock>上锁</button>
@@ -233,7 +274,23 @@ const Moments = (() => {
           </div>
         </div>
         <p id="momentReadWarning" class="moment-error" role="status" hidden></p>
-        <div id="momentList" aria-live="polite"><p class="muted">正在读取记录…</p></div>`;
+        <section class="moment-calendar" aria-labelledby="momentMonthLabel">
+          <header class="moment-calendar-head">
+            <h3 id="momentMonthLabel" aria-live="polite"></h3>
+            <div class="moment-calendar-nav">
+              <button class="btn small" id="momentToday" type="button">今天</button>
+              <button class="btn small moment-month-arrow" id="momentPrevMonth" data-month-shift="-1" aria-label="上个月" type="button">‹</button>
+              <button class="btn small moment-month-arrow" id="momentNextMonth" data-month-shift="1" aria-label="下个月" type="button">›</button>
+            </div>
+          </header>
+          <div class="moment-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div id="momentCalendarGrid" class="moment-calendar-grid"></div>
+          <footer class="moment-calendar-footer">
+            <span id="momentCalendarSummary" role="status">正在读取记录…</span>
+            <button class="btn small" id="momentClearFilters" type="button" hidden>清除筛选</button>
+            <select id="momentMonthJump" aria-label="跳到有记录的月份" hidden></select>
+          </footer>
+        </section>`;
     }
     const request = ++renderRequest;
     let unavailable = false;
@@ -260,7 +317,7 @@ const Moments = (() => {
     warning.hidden = !unavailable;
     warning.textContent = unavailable ? "有部分记录暂时无法读取。可重新解锁，或先导出完整备份。" : "";
     updateTagFilter();
-    renderList();
+    renderCalendar();
   }
 
   function validRecord(record) {
@@ -357,7 +414,7 @@ const Moments = (() => {
     return () => addTags(pending()) ? tags.slice() : null;
   }
 
-  function openEditor(entry) {
+  function openEditor(entry, date = todayISO()) {
     if (!keys.size) return;
     const editing = entry?.record;
     let photo = validPhoto(editing?.photo) ? editing.photo : "";
@@ -368,7 +425,7 @@ const Moments = (() => {
     openWideModal(editing ? "编辑点滴" : "新的点滴", `
       <form id="momentEditor" data-private-moment>
         <div class="row2">
-          <label class="field">日期<input name="date" type="date" required value="${esc(editing?.date || todayISO())}"></label>
+          <label class="field">日期<input name="date" type="date" required min="0001-01-01" max="9999-12-31" value="${esc(editing?.date || date)}"></label>
           <label class="field">标题（选填）<input name="title" maxlength="80" value="${esc(editing?.title || "")}" placeholder="给它起个好找的名字"></label>
         </div>
         <label class="field">想记下来<textarea name="body" required maxlength="6000" rows="5" placeholder="当时发生了什么？有什么小细节想留住？">${esc(editing?.body || "")}</textarea></label>
@@ -461,7 +518,12 @@ const Moments = (() => {
         if (vaultSize > 2500000) throw Error("点滴的同步空间已满，可以移除一些照片后再试。");
         settings()[name] = packet;
         await syncClient.commit(state.db);
-        if (isActive()) { closeModal(); toast("已保存点滴"); render(); }
+        if (isActive()) {
+          calendarMonth = record.date.slice(0, 7);
+          closeModal();
+          toast("已保存点滴");
+          render();
+        }
       } catch (error) {
         if (isActive()) showError(error.message || "保存未完成，请重试。");
       } finally {
@@ -479,17 +541,31 @@ const Moments = (() => {
       ${validPhoto(record.photo) ? `<img class="moment-detail-photo" src="${record.photo}" alt="记录照片">` : ""}`;
   }
 
-  function openDetail(entry) {
+  function openDetail(entry, sameDay) {
     if (!keys.size) return;
     const { name, record, conflict } = entry;
+    const position = sameDay?.indexOf(entry) ?? 0;
     openWideModal(record.title || "点滴记录", `
       <div data-private-moment>
+        ${sameDay?.length > 1 ? `<nav class="moment-day-pager" aria-label="当天记录">
+          <button class="btn small" id="momentPrevNote" type="button" ${position === 0 ? "disabled" : ""}>上一条</button>
+          <span>第 ${position + 1} / ${sameDay.length} 条</span>
+          <button class="btn small" id="momentNextNote" type="button" ${position === sameDay.length - 1 ? "disabled" : ""}>下一条</button>
+        </nav>` : ""}
         ${detailBody(record)}
         <div class="modal-actions">
+          ${sameDay ? '<button class="btn small" id="momentAddOnDay" type="button">＋ 记这天</button>' : ""}
           ${conflict ? '<button class="btn primary moment-primary" type="button" id="momentCompare">核对版本</button>'
             : '<button class="btn small danger" type="button" id="momentDelete">删除</button><button class="btn primary moment-primary" type="button" id="momentEdit">编辑</button>'}
         </div>
       </div>`);
+    if (sameDay) {
+      $("#momentAddOnDay").onclick = () => openEditor(null, record.date);
+      if (sameDay.length > 1) {
+        $("#momentPrevNote").onclick = () => openDetail(sameDay[position - 1], sameDay);
+        $("#momentNextNote").onclick = () => openDetail(sameDay[position + 1], sameDay);
+      }
+    }
     if (conflict) {
       $("#momentCompare").onclick = () => compareVersions(entry);
       return;
@@ -544,23 +620,42 @@ const Moments = (() => {
       unlock(event.target);
     });
     root().addEventListener("input", event => {
-      if (event.target.id === "momentSearch") renderList();
+      if (event.target.id === "momentSearch") renderCalendar(true);
     });
     root().addEventListener("change", event => {
-      if (event.target.id === "momentTagFilter") renderList();
+      if (event.target.id === "momentTagFilter") renderCalendar(true);
+      if (event.target.id === "momentMonthJump" && event.target.value) {
+        calendarMonth = event.target.value;
+        renderCalendar();
+      }
     });
     root().addEventListener("click", event => {
       const button = event.target.closest("button");
       if (!button || !keys.size) return;
       if (button.hasAttribute("data-moment-lock")) { lock(); return; }
       if (button.hasAttribute("data-moment-new")) { openEditor(); return; }
+      if (button.id === "momentClearFilters") {
+        filter = "all";
+        $("#momentSearch").value = "";
+        $("#momentTagFilter").value = "";
+        renderCalendar();
+        return;
+      }
       if (button.hasAttribute("data-moment-filter")) {
         filter = button.dataset.momentFilter;
-        if (button.hasAttribute("data-clear-search")) {
-          $("#momentSearch").value = "";
-          $("#momentTagFilter").value = "";
-        }
-        renderList();
+        renderCalendar(true);
+        return;
+      }
+      if (button.id === "momentToday" || button.dataset.monthShift) {
+        calendarMonth = button.id === "momentToday" ? todayISO().slice(0, 7) : shiftedMonth(Number(button.dataset.monthShift));
+        renderCalendar();
+        return;
+      }
+      if (button.dataset.momentDay) {
+        const date = button.dataset.momentDay;
+        const notes = calendarDays.get(date);
+        if (notes?.length) openDetail(notes[0], notes);
+        else openEditor(null, date);
         return;
       }
       if (button.id === "momentRandom") {
@@ -575,8 +670,6 @@ const Moments = (() => {
         }
         return;
       }
-      const entry = entries.find(item => item.name === button.dataset.momentOpen);
-      if (entry) openDetail(entry);
     });
     window.addEventListener("pagehide", lock);
     document.addEventListener("visibilitychange", () => {
