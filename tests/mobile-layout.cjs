@@ -63,14 +63,14 @@ async function seed(page){
       const initial=await page.evaluate(()=>JSON.stringify(state.db));
       assert.equal(await page.locator('[data-view="schedule"],#view-schedule,[data-modal="todo"],#dashTodos').count(),0);
       if(mobile){
-        assert.deepEqual(await page.locator('#bottomNav button>span:last-child').allTextContents(),['今日','课程','记账','DDL','回顾','点滴']);
+        assert.deepEqual(await page.locator('#bottomNav button>span:last-child').allTextContents(),['今日','课程','记账','DDL','点滴']);
         assert.equal(await page.locator('#bottomNav .active').getAttribute('data-view'),'dashboard');
         const nav=await page.evaluate(()=>{const b=document.querySelector('#bottomNav').getBoundingClientRect();return {bottom:b.bottom,last:Math.max(...[...document.querySelectorAll('#bottomNav button>span:last-child')].map(s=>s.getBoundingClientRect().bottom))}});
         assert(nav.bottom<=height+1&&nav.last<=height-5,'bottom labels cut off');
       }
       for(const theme of ['light','dark']){
         await page.evaluate(theme=>applyTheme(theme),theme);
-        for(const view of ['dashboard','course','finance','deadline','review','moments']){
+        for(const view of ['dashboard','course','finance','deadline','moments']){
           await page.locator(`${mobile?'#bottomNav':'#nav'} [data-view=${view}]`).click();await wait(page);await bounds(page,`${width}/${theme}/${view}`);
           if(view==='finance'){
             await page.locator('[data-finance-period=year]').click();
@@ -125,7 +125,7 @@ async function seed(page){
       // Large text: preserve readable labels, permit tab-strip scrolling, never page overflow.
       if(mobile){
         const style=await page.addStyleTag({content:'body {font-size:19px} .tabs button,.segmented button {font-size:18px} .bottom-nav button {font-size:16px}'});
-        for(const v of ['course','finance','deadline','review','moments']){await page.evaluate(v=>switchView(v),v);await wait(page);await bounds(page,`${width}/large-text/${v}`);}
+        for(const v of ['course','finance','deadline','moments']){await page.evaluate(v=>switchView(v),v);await wait(page);await bounds(page,`${width}/large-text/${v}`);}
         await page.evaluate(()=>openModal('deadline'));await sheetBounds(page,`${width}/large-text/modal`);await page.locator('#modalClose').click();await style.evaluate(el=>el.remove());
       }
       assert.equal(await page.evaluate(()=>JSON.stringify(state.db)),initial,'layout interactions changed saved records');
@@ -144,7 +144,7 @@ async function seed(page){
         await page.evaluate(async()=>{state.db.deadlines=state.db.deadlines.filter(t=>t.title!=='虚构移动端保存验证');await save();});
         await page.waitForFunction(()=>syncClient.localWrites===0&&!syncClient.localRunning);
       }
-      assert.deepEqual(errors,[]);console.log(`PASS ${width}×${height}: populated pages, hidden legacy schedules, six-tab navigation, forms, course tabs, sync settings${mobile?', touch swipe, keyboard-size viewport, enlarged text':''}`);
+      assert.deepEqual(errors,[]);console.log(`PASS ${width}×${height}: populated pages, hidden legacy schedules, five-tab navigation, forms, course tabs, sync settings${mobile?', touch swipe, keyboard-size viewport, enlarged text':''}`);
       await context.close();
     }
   }finally{await browser.close();await fixture.close();}

@@ -58,17 +58,18 @@ const {startTestServer}=require('./browser-server.cjs');
   await a.locator('.hero [data-modal="deadline"]').click();await a.locator('#ddlTitle').fill('未保存的编辑框');
   await edit(b,async()=>{state.db.deadlines.push({id:'remote-new',title:'另一端新增',date:todayISO(),time:'10:00',done:false});await save();});await tick(b);await tick(a);
   assert.equal(await a.locator('#ddlTitle').inputValue(),'未保存的编辑框');await a.locator('#modalClose').click();await a.waitForFunction(()=>state.db.deadlines.some(t=>t.id==='remote-new'));
-  // Daily review draft is not replaced by a remote update or navigating away.
-  await a.locator('#bottomNav [data-view="review"]').click();await a.locator('#reviewOutput').fill('今天的回顾草稿\n第二行');
-  await edit(b,async()=>{state.db.transactions.push({id:'after-review',type:'expense',amount:9,category:'餐饮',date:todayISO()});await save();});await tick(b);await tick(a);
-  assert.equal(await a.locator('#reviewOutput').inputValue(),'今天的回顾草稿\n第二行');
-  await a.locator('#bottomNav [data-view="finance"]').click();await a.locator('#bottomNav [data-view="review"]').click();assert.equal(await a.locator('#reviewOutput').inputValue(),'今天的回顾草稿\n第二行');
-  await a.locator('#reviewSaveBtn').click();await a.waitForFunction(()=>syncClient.localWrites===0);await tick(a);await tick(b);
-  assert.equal(await b.evaluate(()=>state.db.reviews[todayISO()]),'今天的回顾草稿\n第二行');
+  // Data from an older installation must still sync and survive edits in the new UI.
+  await edit(b,async()=>{state.db.reviews['2021-10-02']='示例旧回顾\n第二行';await save();});await tick(b);await tick(a);
+  await a.waitForFunction(()=>state.db.reviews['2021-10-02']==='示例旧回顾\n第二行');
+  await a.locator('#bottomNav [data-view="finance"]').click();
+  await edit(a,async()=>{state.db.transactions.push({id:'archive-check',type:'expense',amount:9,category:'餐饮',date:todayISO()});await save();});await tick(a);await tick(b);
+  assert.equal(await b.evaluate(()=>state.db.reviews['2021-10-02']),'示例旧回顾\n第二行');
+  assert.equal(await a.locator('[data-view="review"],#view-review').count(),0);
   await a.evaluate(()=>exportFullBackup());assert(exports.at(-1)._sync);assert(!JSON.stringify(exports.at(-1)).includes('not-real'));assert.equal(files.size,3);
+  assert.equal(exports.at(-1).reviews['2021-10-02'],'示例旧回顾\n第二行');
   // Truncated remote JSON must cause an error, preserving all local records.
   const count=await a.evaluate(()=>state.db.todos.length);files.set('device-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.json',{body:'{bad',etag:'bad'});await tick(a);assert(await a.evaluate(()=>!!syncClient.cloudError));assert.equal(await a.evaluate(()=>state.db.todos.length),count);
   for(const p of pages){assert.deepEqual(p.errors,[]);assert.equal(await p.locator('[data-view="schedule"],[data-modal="todo"]').count(),0);assert.equal(await p.evaluate(()=>state.db.todos.length),1);assert.equal(await p.evaluate(()=>state.db.todos[0].title),'保留的旧日程');}
-  console.log('PASS simulated Android bridge: independent offline stores, bidirectional DAV snapshots, restart, concurrent conflicts, explicit resolution, tombstones, stale snapshots, open form/review drafts, secret-free export, malformed remote protection, hidden legacy schedule preservation');
+  console.log('PASS simulated Android bridge: offline storage, bidirectional sync, explicit conflict resolution, tombstones, open forms, secret-free export and legacy schedule/review preservation');
  }finally{for(const c of contexts)await c.close();await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,6 +1,6 @@
 # 日常面板 · Personal Dashboard
 
-把课程、记账、重要事项和每日回顾放在一个简洁的面板里。
+把课程、记账、重要事项和点滴放在一个简洁的面板里。
 
 **电脑本地使用 · 安卓独立运行 · 离线记录 · 可选坚果云同步**
 
@@ -14,10 +14,10 @@
 
 | 你的设备 | 下载入口 | 基本要求 |
 | --- | --- | --- |
-| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.7/personal-dashboard-desktop-1.0.7.zip) | Python 3.10+；Windows 不需要 WSL |
-| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.7/personal-dashboard-android-1.0.7.zip) | Android 8.0+，较新的系统 WebView |
+| Windows / macOS / Linux | [电脑版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.8/personal-dashboard-desktop-1.0.8.zip) | Python 3.10+；Windows 不需要 WSL |
+| 安卓手机 | [安卓版 ZIP](https://github.com/skc111/personal-dashboard/releases/download/v1.0.8/personal-dashboard-android-1.0.8.zip) | Android 8.0+，较新的系统 WebView |
 
-以上直链对应 v1.0.7；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
+以上直链对应 v1.0.8；后续版本请到 [Releases](https://github.com/skc111/personal-dashboard/releases/latest) 查看。下载包附带第三方许可，`SHA256SUMS` 可用于校验文件完整性。
 
 ### Windows：双击启动
 
@@ -40,15 +40,15 @@ python3 launch.py
 
 ### 安卓：不依赖电脑
 
-1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.7.apk`**。
+1. 解压安卓版 ZIP，安装里面的 **`personal-dashboard-1.0.8.apk`**。
 2. 如果系统询问是否允许当前浏览器/文件管理器安装应用，按需允许。
 3. 打开「日常面板」即可开始记录；不设置同步也能使用。
 
 **电脑关机不影响安卓使用。** 卸载或清除应用数据前，务必先导出备份。
 
-**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.7 沿用旧版的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
+**从旧版升级：直接覆盖安装，不要先卸载。** 官方 v1.0.8 沿用旧版的包名和签名，不改变记录目录、坚果云凭据或加密密钥标识；正常覆盖安装无需重新绑定。若手机提示签名不一致，请停止安装并反馈，不要清除数据。
 
-v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、记账、DDL、回顾。旧日程只作为历史数据保留在原存储、完整导出和同步中，不再参与首页及新生成的回顾/周报；升级不删除旧记录。另补充电脑端仅保存在浏览器时的警告、紧急导出与关页提醒。
+日程和回顾（含周报）已停用。已保存的日程和回顾仍包含在完整备份与同步数据中。电脑端仅保存在浏览器时会提示及时导出备份。
 
 「点滴」支持密码解锁、月历浏览、关键词搜索、收藏和可选照片。点击日期查看或新增，月历可按标签和收藏筛选。新增或编辑时可输入自己的标签，也可点选用过的标签。初次使用请设置自己的密码。
 
@@ -60,7 +60,6 @@ v1.0.2 移除日程模块及首页相关待办入口，保留今日、课程、�
 | 课程 | 每门课一张卡片，整理考试要求、知识点、问题与复习资料链接 |
 | 记账 | 月度与年度收支、分类统计、每日支出、每月收支对比、旅行账本和 CSV 导出 |
 | 重要事项 | 截止日期与时间、完成状态、首页 DDL 提醒 |
-| 回顾与周报 | 生成并编辑每日回顾，查看每周统计 |
 | 点滴 | 记录一起经历的事和想记住的细节，解锁后浏览和编辑 |
 
 另有深色模式、JSON 备份与合并导入，以及可选的跨设备同步。

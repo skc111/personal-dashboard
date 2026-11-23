@@ -166,7 +166,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .tabs button { all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 14px; border-radius: 7px; font-size: 13.5px; color: var(--muted); }
 .tabs button.active { background: var(--panel); color: var(--primary); font-weight: 600; box-shadow: var(--shadow); }
 [data-theme="dark"] .tabs button.active { background: var(--primary-soft); }
-.tabs.big button { padding: 8px 18px; font-size: 14px; }
 
 /* ================= Hero ================= */
 .hero {
@@ -291,8 +290,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
   .annual-months th, .annual-months td { padding-inline: 5px; }
   .annual-months th button { min-height: 38px; }
 }
-.week-label { font-weight: 700; font-size: 15px; }
-#reviewOutput { font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; margin-top: 4px; }
 
 /* ================= 弹窗 ================= */
 .modal-overlay {
@@ -496,7 +493,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .choice-body { display: grid; gap: 10px; }
 .modal-head h3 { min-width: 0; }
 .modal-actions { flex-wrap: wrap; }
-#reviewTabs { margin-bottom: 12px; }
 
 /* ================= 手机 / 窄屏（统一覆盖） ================= */
 @media (max-width: 860px) {
@@ -530,14 +526,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   input, select, textarea, .field input, .field select, .field textarea { font-size: 16px; }
   input:not([type=checkbox]):not([type=hidden]), select { min-height: 44px; }
   .tabs button, .segmented button { min-height: 40px; padding: 8px 12px; text-align: center; }
-  .tabs.big button { padding: 8px 12px; }
-  .tabs.big { display: flex; }
-  .tabs.big button { flex: 1 0 auto; }
 
   /* 导航本身和正文各自预留高度；一份图标、一份文字。 */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px;
     background: var(--panel); border-top: 1px solid var(--border);
     padding: 6px 6px 10px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -572,9 +565,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .bar-col { min-width: 0; }
   .pie-wrap { justify-content: center; }
   .pie-legend { min-width: 0; flex-basis: 100%; }
-  #reviewWeekly > .toolbar { display: grid; grid-template-columns: 1fr 1fr; }
-  .week-label { grid-row: 1; grid-column: 1 / -1; text-align: center; }
-  #reviewOutput { min-height: 320px; }
 
   /* 明确的抽屉高度 + 可收缩滚动区，兼容旧版 Android WebView。
      visualViewport / resize 更新变量，键盘出现后保存按钮仍在可见区域内。 */

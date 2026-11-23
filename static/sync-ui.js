@@ -14,14 +14,11 @@ function renderSyncStatus(info) {
     if(banner&&['local-error','browser-only'].includes(banner.dataset.reason))saveBanner(false);
   }
 }
-function reviewHasDraft() {
-  return typeof reviewDirty!=='undefined' && reviewDirty;
-}
 function applyRemoteUpdates() {
   if(!syncClient?.ready||!state.db)return;
   remoteRefreshPending=true;
-  // Never replace an open editor or a daily-review draft in response to polling.
-  if(!document.getElementById('modalOverlay').hidden||reviewHasDraft())return;
+  // Never replace an open editor in response to polling.
+  if(!document.getElementById('modalOverlay').hidden)return;
   if(DashboardSyncCore.equal(syncClient.doc,syncClient.viewDoc)){remoteRefreshPending=false;return;}
   state.db=syncClient.takeView();applyTheme(state.db.settings.theme);render();remoteRefreshPending=false;
 }
@@ -67,7 +64,7 @@ function openSyncConflicts() {
   const hasPrivateConflicts = conflicts.some(privateConflict);
   const visibleConflicts = conflicts.filter(conflict => !privateConflict(conflict));
   const contexts=visibleConflicts.map(c=>DashboardSyncCore.clone(syncClient.doc.records[c.key]));
-  const names={todos:'旧日程（已停用）',transactions:'收支',subjects:'课程',deadlines:'DDL',trips:'旅行',reviews:'回顾',settings:'设置',studies:'旧知识库',courses:'旧课程'};
+  const names={todos:'旧日程（已停用）',transactions:'收支',subjects:'课程',deadlines:'DDL',trips:'旅行',reviews:'旧回顾（已停用）',settings:'设置',studies:'旧知识库',courses:'旧课程'};
   openWideModal('核对同时修改的记录',`<p class="muted">不同记录会自动合并。下面这些记录曾被两端同时修改，所有版本均已保留。暂不处理不会丢失任一版本；列表和统计暂显示其中一版。建议先导出完整备份。</p><button class="btn" id="conflictExportBtn">导出所有版本</button>${hasPrivateConflicts ? '<p><button class="btn" id="syncOpenMoments">前往「点滴」核对私密记录</button></p>' : ''}${visibleConflicts.length?visibleConflicts.map((c,i)=>{
     const [table,id]=JSON.parse(c.key);
     return `<section class="conflict-card"><h3>${esc(names[table]||table)} · ${esc(id)}</h3>${c.versions.map((v,j)=>`<div class="conflict-version"><div class="muted small-text">${esc(v.at)} · ${esc(v.actor.slice(0,13))}</div><pre>${esc(v.value===null?'（已删除）':typeof v.value==='string'?v.value:JSON.stringify(v.value,null,2))}</pre><button class="btn small" data-resolve="${i}:${j}">${v.value===null?'确认删除':'采用这个版本'}</button></div>`).join('')}</section>`;

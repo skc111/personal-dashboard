@@ -10,10 +10,16 @@ const {startTestServer}=require('./browser-server.cjs');
   const before=await page.evaluate(()=>({todos:state.db.todos.length,transactions:state.db.transactions.length,subjects:state.db.subjects.length}));
   assert.equal(before.todos,0);assert.equal(before.transactions,0);assert.equal(before.subjects,0);
   // A UI removal must never delete hidden historical data or its sync versions.
-  await page.evaluate(async()=>{state.db.todos.push({id:'legacy-schedule',title:'旧日程只保留数据',date:todayISO(),start:'07:30',end:'08:00',done:false,note:'归档备注',repeat:'每周',seriesId:'legacy-series'});await save();});
+  const legacyReview = { '2021-10-02': '归档的示例回顾\n保留第二行' };
+  await page.evaluate(async reviews => {
+    state.db.todos.push({id:'legacy-schedule',title:'旧日程只保留数据',date:todayISO(),start:'07:30',end:'08:00',done:false,note:'归档备注',repeat:'每周',seriesId:'legacy-series'});
+    Object.assign(state.db.reviews, reviews);
+    await save();
+  }, legacyReview);
   const legacy=await page.evaluate(()=>JSON.stringify(state.db.todos));
   assert.equal(await page.locator('[data-view="schedule"],#view-schedule,[data-modal="todo"],#dashTodos').count(),0);
-  assert.equal(await page.locator('#bottomNav button').count(),6);
+  assert.equal(await page.locator('[data-view="review"],#view-review').count(),0);
+  assert.equal(await page.locator('#bottomNav button').count(),5);
   assert(!await page.locator('#view-dashboard').textContent().then(s=>s.includes('旧日程只保留数据')));
   await page.locator('.hero [data-modal="deadline"]').click();await page.locator('#ddlTitle').fill('同步测试-DDL');await page.locator('#ddlTimeH').fill('7');await page.locator('#ddlTimeM').fill('30');await page.locator('#ddlNote').fill('第一行\n第二行');
   const deadlineEditor = page.locator('#deadlineForm');
@@ -24,11 +30,11 @@ const {startTestServer}=require('./browser-server.cjs');
   await page.waitForFunction(()=>state.db.deadlines.some(t=>t.title==='同步测试-DDL')&&syncClient.localWrites===0&&!syncClient.localRunning);
   await page.reload();await page.waitForFunction(()=>syncClient?.ready&&state.db.deadlines.some(t=>t.title==='同步测试-DDL'));
   assert.equal(await page.evaluate(()=>JSON.stringify(state.db.todos)),legacy);
-  assert(!await page.evaluate(()=>buildReview(todayISO()).includes('## 待办')));
-  await page.evaluate(()=>{switchView('review');state.reviewTab='weekly';renderWeekly();});
-  assert(!await page.locator('#weeklyContent').textContent().then(t=>/完成任务|完成率/.test(t)));
-  await page.evaluate(()=>{state.reviewTab='daily';switchView('schedule');});
-  assert.equal(await page.evaluate(()=>state.view),'dashboard','removed route must fall back safely');
+  assert.deepEqual(await page.evaluate(()=>state.db.reviews),legacyReview);
+  for (const removed of ['review','schedule']) {
+    await page.evaluate(view=>{switchView('finance');switchView(view);},removed);
+    assert.equal(await page.evaluate(()=>state.view),'dashboard','removed route must fall back safely');
+  }
 
   // Annual reporting uses calendar-year boundaries and includes travel exactly once.
   const reportYear = await page.evaluate(() => String(Number(todayISO().slice(0, 4)) - 1));
@@ -74,6 +80,7 @@ const {startTestServer}=require('./browser-server.cjs');
   assert(await page.evaluate(()=>DashboardSyncCore.materialize(syncClient.doc).transactions.some(t=>t.id==='browser-a')&&DashboardSyncCore.materialize(syncClient.doc).deadlines.some(t=>t.id==='browser-b')));
   const saved=await(await page.request.get(fixture.url+'/api/data')).json();
   assert(saved.transactions.some(t=>t.id==='browser-a')&&saved.deadlines.some(t=>t.id==='browser-b'));
+  assert.deepEqual(saved.reviews,legacyReview);
   await tab.close();
   await page.route('**/api/**',r=>r.abort());
   await page.evaluate(async()=>{state.db.transactions.push({id:'offline-test',type:'expense',date:todayISO(),amount:12,category:'餐饮',note:'离线保存'});await save();});
@@ -86,6 +93,7 @@ const {startTestServer}=require('./browser-server.cjs');
   assert(emergencyData.transactions.some(t=>t.id==='offline-test'),'emergency export must include the unconfirmed edit');
   assert(emergencyData._sync,'emergency export must preserve merge metadata');
   assert.equal(JSON.stringify(emergencyData.todos),legacy,'full export must retain historical schedules');
+  assert.deepEqual(emergencyData.reviews,legacyReview,'full export must retain historical reviews');
   let warned=false;
   page.once('dialog',async dialog=>{assert.equal(dialog.type(),'beforeunload');warned=true;await dialog.accept();});
   await page.reload();await page.waitForFunction(()=>syncClient?.ready&&state.db.transactions.some(t=>t.id==='offline-test'));
@@ -99,10 +107,10 @@ const {startTestServer}=require('./browser-server.cjs');
   assert.equal(await page.evaluate(()=>window.testConfirmedCloud),false);
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:require('node:path').join(fixture.dir,'home.png'),fullPage:true});
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false);
-  for(const view of ['course','finance','deadline','review','moments']){await page.locator(`#bottomNav [data-view="${view}"]`).click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'overflow in '+view);}
+  for(const view of ['course','finance','deadline','moments']){await page.locator(`#bottomNav [data-view="${view}"]`).click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'overflow in '+view);}
   await page.locator('#syncBadge').click();await page.screenshot({path:require('node:path').join(fixture.dir,'sync.png'),fullPage:true});
   assert.equal(await page.evaluate(()=>JSON.stringify(state.db.todos)),legacy);
-  assert.deepEqual(errors,[]);console.log('PASS fresh empty desktop, DDL create/reload, schedule UI removed with legacy data preserved, multitab, offline reload, 390px all six modules, sync settings; no JS errors');
+  assert.deepEqual(errors,[]);console.log('PASS five views, DDL and finance, legacy schedule/review preservation, multitab, offline reload and exports');
   await context.close();
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

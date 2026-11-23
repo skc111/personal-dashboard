@@ -21,8 +21,6 @@ const sortBy = (arr, keys, dir = 1) => [...arr].sort((a, b) => {
 function isoOf(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 const todayISO = () => isoOf(new Date());
 function addDays(iso, n) { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return isoOf(d); }
-function mondayOf(iso) { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoOf(d); }
-function weekDates(mon) { return Array.from({ length: 7 }, (_, i) => addDays(mon, i)); }
 function fmtCN(iso) { const d = new Date(iso + "T00:00"); return `${d.getMonth() + 1}月${d.getDate()}日 周${"日一二三四五六"[d.getDay()]}`; }
 function greet() { const h = new Date().getHours(); return h < 6 ? "夜深了" : h < 11 ? "早上好" : h < 14 ? "中午好" : h < 18 ? "下午好" : "晚上好"; }
 const parseTags = (s) => s.split(/[,，]/).map((x) => x.trim()).filter(Boolean);
@@ -64,7 +62,7 @@ const state = {
   financePeriod: "month",
   financeMonth: todayISO().slice(0, 7),
   financeYear: todayISO().slice(0, 4),
-  weekOffset: 0, reviewTab: "daily", subjectTab: "points",
+  subjectTab: "points",
 };
 
 /* ================= 数据 ================= */
@@ -325,7 +323,7 @@ function fillSettings() {
 }
 
 /* ================= 视图 ================= */
-const TITLES = { dashboard: "今日", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", review: "回顾", moments: "点滴" };
+const TITLES = { dashboard: "今日", course: "课程总结", finance: "记账", deadline: "重要事项 DDL", moments: "点滴" };
 function switchView(view) {
   if (!Object.hasOwn(TITLES, view)) view = "dashboard";
   const leavingMoments = state.view === "moments" && view !== "moments";
@@ -342,7 +340,7 @@ function switchView(view) {
   window.scrollTo(0, 0);
 }
 function render() {
-  ({ dashboard: renderDashboard, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, review: renderReview, moments: Moments.render }[state.view] || renderDashboard)();
+  ({ dashboard: renderDashboard, course: renderCourse, finance: renderFinance, deadline: renderDeadlines, moments: Moments.render }[state.view] || renderDashboard)();
 }
 
 /* ================= 今日 ================= */
@@ -742,76 +740,6 @@ function tripDetailHTML(trip) {
   </div>`;
 }
 
-/* ================= 回顾 ================= */
-function buildReview(date) {
-  const db = state.db;
-  const subjPts = [];
-  (db.subjects || []).forEach((sub) => (sub.points || []).forEach((p) => { if (p.date === date) subjPts.push({ course: sub.name, topic: p.title, detail: p.detail }); }));
-  const trans = db.transactions.filter((t) => t.date === date);
-  const exp = sum(trans.filter((t) => t.type === "expense"), (t) => t.amount);
-  const inc = sum(trans.filter((t) => t.type === "income"), (t) => t.amount);
-  const L = [`# ${date} 每日回顾`, "", "## 课程"];
-  if (subjPts.length) subjPts.forEach((p) => {
-    L.push(`- ${p.course}｜${p.topic}`);
-    if (p.detail) L.push(`  - ${p.detail.split("\n")[0]}`);
-  }); else L.push("-（无记录）");
-  L.push("", "## 收支");
-  trans.forEach((t) => L.push(`- ${t.type === "income" ? "收入" : "支出"} ${money(t.amount)} ${t.category}${t.note ? "（" + t.note + "）" : ""}`));
-  L.push(`- 小计：支出 ${money(exp)}，收入 ${money(inc)}`);
-  const nearDdls = sortBy((db.deadlines || []).filter((t) => !t.done && daysLeft(t.date) <= 7), ["date", "time"]);
-  if (nearDdls.length) {
-    L.push("", "## 近期 DDL（7 天内）");
-    nearDdls.forEach((t) => L.push(`- ${t.date}${t.time ? " " + t.time : ""} ${t.title}（${daysLeft(t.date) < 0 ? "已过期" + (-daysLeft(t.date)) + "天" : daysLeft(t.date) === 0 ? "今天" : daysLeft(t.date) + "天后"}）`));
-  }
-  return L.join("\n");
-}
-let reviewDirty=false, reviewDraftDate=null;
-function loadReview(date) {
-  if(reviewDirty && reviewDraftDate===date)return;
-  $("#reviewOutput").value=state.db.reviews[date] || buildReview(date);
-  reviewDraftDate=date; reviewDirty=false;
-}
-function renderReview() {
-  if (state.reviewTab === "daily") {
-    if (!$("#reviewDate").value) $("#reviewDate").value = todayISO();
-    loadReview($("#reviewDate").value);
-    $("#reviewSavedHint").textContent = state.db.reviews[$("#reviewDate").value] ? "已保存过此日回顾" : "";
-  } else renderWeekly();
-}
-function renderWeekly() {
-  const today = todayISO();
-  const mon = mondayOf(addDays(today, state.weekOffset * 7));
-  const days = weekDates(mon), sun = days[6];
-  const d1 = new Date(mon + "T00:00");
-  const weekNo = Math.ceil(((d1 - new Date(d1.getFullYear(), 0, 1)) / 86400000 + new Date(d1.getFullYear(), 0, 1).getDay()) / 7);
-  $("#weekLabel").textContent = `${d1.getFullYear()} 年第 ${weekNo} 周（${mon.slice(5)} ~ ${sun.slice(5)}）`;
-
-  const trans = state.db.transactions.filter((t) => t.date >= mon && t.date <= sun);
-  const exp = sum(trans.filter((t) => t.type === "expense"), (t) => t.amount);
-  const inc = sum(trans.filter((t) => t.type === "income"), (t) => t.amount);
-  const subjNames = new Set(); let pointCnt = 0;
-  (state.db.subjects || []).forEach((sub) => (sub.points || []).forEach((p) => { if (p.date >= mon && p.date <= sun) { pointCnt++; subjNames.add(sub.name); } }));
-  const byCat = {};
-  trans.filter((t) => t.type === "expense").forEach((t) => (byCat[t.category] = (byCat[t.category] || 0) + Number(t.amount)));
-  const topCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  $("#weeklyContent").innerHTML = `
-    <div class="stats-grid stats-2">
-      <div class="stat-card"><div class="stat-ico">💰</div><div><div class="label">本周支出</div><div class="value red">${money(exp)}</div><div class="sub">收入 ${money(inc)}</div></div></div>
-      <div class="stat-card"><div class="stat-ico">📚</div><div><div class="label">课程总结</div><div class="value">${pointCnt} 篇</div><div class="sub">${[...subjNames].map(esc).join("、") || "暂无"}</div></div></div>
-    </div>
-    <div class="grid-2">
-      <div class="panel"><div class="panel-head"><h3>支出 Top 分类</h3></div>
-        ${topCats.length ? topCats.map(([c, v]) => `<div class="legend-row"><span>${esc(c)}</span><b>${money(v)}</b></div>`).join("") : '<div class="empty">本周暂无支出</div>'}
-      </div>
-      <div class="panel"><div class="panel-head"><h3>每日收支</h3></div>
-        ${days.map((d) => {
-          const daily = trans.filter((t) => t.date === d);
-          return `<div class="legend-row"><span>${fmtCN(d)}</span><b>支出 ${money(sum(daily.filter((t) => t.type === "expense"), (t) => t.amount))} · 收入 ${money(sum(daily.filter((t) => t.type === "income"), (t) => t.amount))}</b></div>`;
-        }).join("")}
-      </div>
-    </div>`;
-}
-
 /* ================= 示例数据 ================= */
 function loadSample() {
   const t = todayISO();
@@ -1132,38 +1060,6 @@ function bindEvents() {
     window.scrollTo(0, 0);
   });
   $("#csvBtn").addEventListener("click", exportCSV);
-
-  // 回顾
-  $$("#reviewTabs button").forEach((b) => b.addEventListener("click", () => {
-    state.reviewTab = b.dataset.rtab;
-    $$("#reviewTabs button").forEach((x) => x.classList.toggle("active", x === b));
-    $("#reviewDaily").hidden = state.reviewTab !== "daily";
-    $("#reviewWeekly").hidden = state.reviewTab !== "weekly";
-    renderReview();
-  }));
-  $("#reviewOutput").addEventListener("input",()=>{reviewDirty=true;});
-  $("#reviewDate").addEventListener("change", (e) => {
-    if(reviewDirty && !confirm("当前回顾尚未保存，切换日期会丢弃编辑框中的草稿。继续？")){e.target.value=reviewDraftDate;return;}
-    reviewDirty=false; loadReview(e.target.value || todayISO());
-    $("#reviewSavedHint").textContent=state.db.reviews[e.target.value]?"已保存过此日回顾":"";
-  });
-  $("#reviewGenBtn").addEventListener("click", () => {
-    const d = $("#reviewDate").value || todayISO(), ta = $("#reviewOutput");
-    if (ta.value && ta.value !== (state.db.reviews[d] || "") && !confirm("重新生成会覆盖编辑框内容（不影响已保存版本）。继续？")) return;
-    ta.value = buildReview(d); reviewDirty=true; reviewDraftDate=d;
-  });
-  $("#reviewSaveBtn").addEventListener("click", () => {
-    const d = $("#reviewDate").value || todayISO();
-    state.db.reviews[d] = $("#reviewOutput").value; reviewDirty=false; save();
-    $("#reviewSavedHint").textContent = "✅ 已保存";
-  });
-  $("#reviewCopyBtn").addEventListener("click", async () => {
-    const txt = $("#reviewOutput").value; if (!txt) return;
-    try { await navigator.clipboard.writeText(txt); } catch { $("#reviewOutput").select(); document.execCommand("copy"); }
-    $("#reviewCopyBtn").textContent = "✅ 已复制"; setTimeout(() => ($("#reviewCopyBtn").textContent = "📋 复制"), 1500);
-  });
-  $("#weekPrevBtn").addEventListener("click", () => { state.weekOffset--; renderWeekly(); });
-  $("#weekNextBtn").addEventListener("click", () => { state.weekOffset++; renderWeekly(); });
 }
 
 /* ================= 启动 ================= */
@@ -1190,7 +1086,6 @@ window.addEventListener("error", (e) => {
     return;
   }
   $("#financeMonth").value = state.financeMonth;
-  $("#reviewDate").value = todayISO();
   bindEvents();
   Moments.bind();
   initViewportLayout();

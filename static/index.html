@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>个人成长面板</title>
-  <link rel="stylesheet" href="style.css?v=1.0.7">
+  <link rel="stylesheet" href="style.css?v=1.0.8">
 </head>
 <body>
 <div class="app">
@@ -15,7 +15,6 @@
       <button data-view="course"><span class="nav-ico">📚</span>课程</button>
       <button data-view="finance"><span class="nav-ico">💰</span>记账</button>
       <button data-view="deadline"><span class="nav-ico">🎯</span>DDL</button>
-      <button data-view="review"><span class="nav-ico">📝</span>回顾</button>
       <button data-view="moments"><span class="nav-ico">♡</span>点滴</button>
     </nav>
     <div class="sidebar-foot"><span id="saveStatus">加载中…</span></div>
@@ -98,36 +97,6 @@
       <div id="ddlList"></div>
     </section>
 
-    <section id="view-review" class="view">
-      <div class="tabs big" id="reviewTabs">
-        <button data-rtab="daily" class="active">🌙 每日回顾</button>
-        <button data-rtab="weekly">📊 周报统计</button>
-      </div>
-
-      <div id="reviewDaily">
-        <div class="panel">
-          <div class="toolbar tight">
-            <input type="date" id="reviewDate" class="w160">
-            <button class="btn" id="reviewGenBtn">🔄 生成</button>
-            <button class="btn primary" id="reviewSaveBtn">💾 保存</button>
-            <button class="btn" id="reviewCopyBtn">📋 复制</button>
-            <div class="flex1"></div>
-            <span class="muted" id="reviewSavedHint"></span>
-          </div>
-          <p class="muted small-text">自动汇总当天数据后可自由编辑，保存后按日期留存。</p>
-          <textarea id="reviewOutput" rows="16" placeholder="选择日期 → 生成 → 编辑 → 保存"></textarea>
-        </div>
-      </div>
-
-      <div id="reviewWeekly" hidden>
-        <div class="toolbar">
-          <button class="btn" id="weekPrevBtn">← 上一周</button>
-          <div id="weekLabel" class="week-label"></div>
-          <button class="btn" id="weekNextBtn">下一周 →</button>
-        </div>
-        <div id="weeklyContent"></div>
-      </div>
-    </section>
     <section id="view-moments" class="view"></section>
   </main>
 </div>
@@ -141,10 +110,10 @@
   </div>
 </div>
 
-<script src="sync-core.js?v=1.0.7" defer></script>
-<script src="sync-client.js?v=1.0.7" defer></script>
-<script src="sync-ui.js?v=1.0.7" defer></script>
-<script src="moments.js?v=1.0.7" defer></script>
-<script src="app.js?v=1.0.7" defer></script>
+<script src="sync-core.js?v=1.0.8" defer></script>
+<script src="sync-client.js?v=1.0.8" defer></script>
+<script src="sync-ui.js?v=1.0.8" defer></script>
+<script src="moments.js?v=1.0.8" defer></script>
+<script src="app.js?v=1.0.8" defer></script>
 </body>
 </html>
