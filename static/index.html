@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>个人成长面板</title>
-  <link rel="stylesheet" href="style.css?v=1.0.6">
+  <link rel="stylesheet" href="style.css?v=1.0.7">
 </head>
 <body>
 <div class="app">
@@ -65,18 +65,28 @@
 
     <section id="view-finance" class="view">
       <div class="page-head">
-        <input type="month" id="financeMonth" class="w160">
+        <div class="finance-period-controls">
+          <div id="financePeriod" class="segmented" role="group" aria-label="统计周期">
+            <button type="button" data-finance-period="month" class="active" aria-pressed="true">月度</button>
+            <button type="button" data-finance-period="year" aria-pressed="false">年度</button>
+          </div>
+          <input type="month" id="financeMonth" aria-label="选择月份">
+          <select id="financeYear" aria-label="选择年份" hidden></select>
+        </div>
         <div class="flex1"></div>
         <button class="btn" id="csvBtn">⬇️ CSV</button>
         <button class="btn primary" data-modal="trans">＋ 记一笔</button>
       </div>
-      <div id="financeStats" class="stats-grid"></div>
-      <div class="grid-2">
-        <div class="panel"><div class="panel-head"><h3>分类占比</h3></div><div id="financePie" class="pie-wrap"></div></div>
-        <div class="panel"><div class="panel-head"><h3>每日支出 <span class="muted small-text">蓝 = 主账本 · 橙 = 旅行</span></h3></div><div id="financeBars" class="bars-wrap"></div></div>
+      <div id="financeMonthly">
+        <div id="financeStats" class="stats-grid"></div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><h3>分类占比</h3></div><div id="financePie" class="pie-wrap"></div></div>
+          <div class="panel"><div class="panel-head"><h3>每日支出 <span class="muted small-text">蓝 = 主账本 · 橙 = 旅行</span></h3></div><div id="financeBars" class="bars-wrap"></div></div>
+        </div>
+        <div id="tripPanel"></div>
+        <div id="transList"></div>
       </div>
-      <div id="tripPanel"></div>
-      <div id="transList"></div>
+      <div id="financeAnnual" hidden></div>
     </section>
 
     <section id="view-deadline" class="view">
@@ -131,10 +141,10 @@
   </div>
 </div>
 
-<script src="sync-core.js?v=1.0.6" defer></script>
-<script src="sync-client.js?v=1.0.6" defer></script>
-<script src="sync-ui.js?v=1.0.6" defer></script>
-<script src="moments.js?v=1.0.6" defer></script>
-<script src="app.js?v=1.0.6" defer></script>
+<script src="sync-core.js?v=1.0.7" defer></script>
+<script src="sync-client.js?v=1.0.7" defer></script>
+<script src="sync-ui.js?v=1.0.7" defer></script>
+<script src="moments.js?v=1.0.7" defer></script>
+<script src="app.js?v=1.0.7" defer></script>
 </body>
 </html>

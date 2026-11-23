@@ -29,6 +29,39 @@ const {startTestServer}=require('./browser-server.cjs');
   assert(!await page.locator('#weeklyContent').textContent().then(t=>/完成任务|完成率/.test(t)));
   await page.evaluate(()=>{state.reviewTab='daily';switchView('schedule');});
   assert.equal(await page.evaluate(()=>state.view),'dashboard','removed route must fall back safely');
+
+  // Annual reporting uses calendar-year boundaries and includes travel exactly once.
+  const reportYear = await page.evaluate(() => String(Number(todayISO().slice(0, 4)) - 1));
+  await page.locator('#nav [data-view=finance]').click();
+  await page.locator('[data-finance-period=year]').click();
+  assert.match(await page.locator('#financeAnnual').textContent(), /这一年还没有收支记录/);
+  await page.evaluate(async year => {
+    const beforeYear = Number(year) - 1, nextYear = Number(year) + 1;
+    state.db.trips.push({id:'annual-trip',city:'示例城市',startDate:`${year}-01-01`,endDate:`${year}-01-01`});
+    state.db.transactions.push(
+      {id:'year-before',date:`${beforeYear}-12-31`,type:'expense',amount:900,category:'其他'},
+      {id:'year-main',date:`${year}-01-01`,type:'expense',amount:12.34,category:'餐饮'},
+      {id:'year-travel',date:`${year}-01-01`,type:'expense',amount:50,category:'交通',tripId:'annual-trip'},
+      {id:'year-income',date:`${year}-12-31`,type:'income',amount:125,category:'其他'},
+      {id:'year-after',date:`${nextYear}-01-01`,type:'income',amount:500,category:'其他'}
+    );
+    await save();
+    renderFinance();
+  }, reportYear);
+  await page.locator('#financeYear').selectOption(reportYear);
+  assert.deepEqual(await page.locator('.annual-totals .value').allTextContents(), ['¥62.34', '¥125.00']);
+  assert.deepEqual(await page.locator('.annual-split span').allTextContents(), ['主账本 ¥12.34', '旅行 ¥50.00']);
+  const months = page.locator('.annual-months tbody tr');
+  assert.equal(await months.count(), 12);
+  assert.deepEqual(await months.first().locator('td span').allTextContents(), ['¥62.34', '—']);
+  assert.deepEqual(await months.last().locator('td span').allTextContents(), ['—', '¥125.00']);
+  await months.first().getByRole('button').click();
+  assert.equal(await page.locator('#financeMonth').inputValue(), reportYear + '-01');
+  assert.equal(await page.locator('#transList .transaction-item').count(), 2);
+  await page.locator('[data-finance-period=year]').click();
+  assert.equal(await page.locator('#financeYear').inputValue(), reportYear);
+  await page.locator('[data-finance-period=month]').click();
+
   await page.locator('#syncBadge').click();await page.locator('#syncEmail').waitFor({state:'visible'});assert(await page.locator('#syncFolder').inputValue()==='personal-dashboard-v1');await page.locator('#modalClose').click();
   const tab=await context.newPage();await tab.goto(fixture.url);await tab.waitForFunction(()=>syncClient?.ready);
   await Promise.all([page.evaluate(async()=>{state.db.transactions.push({id:'browser-a',type:'expense',date:todayISO(),amount:11,category:'餐饮',note:'并发 A'});await save();}),tab.evaluate(async()=>{state.db.deadlines.push({id:'browser-b',title:'并发 B',date:todayISO(),time:'09:00',done:false});await save();})]);

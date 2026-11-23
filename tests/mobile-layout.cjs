@@ -72,6 +72,16 @@ async function seed(page){
         await page.evaluate(theme=>applyTheme(theme),theme);
         for(const view of ['dashboard','course','finance','deadline','review','moments']){
           await page.locator(`${mobile?'#bottomNav':'#nav'} [data-view=${view}]`).click();await wait(page);await bounds(page,`${width}/${theme}/${view}`);
+          if(view==='finance'){
+            await page.locator('[data-finance-period=year]').click();
+            assert.equal(await page.locator('.annual-months tbody tr').count(),12);
+            await bounds(page,`${width}/${theme}/annual`);
+            if(process.env.MOBILE_SCREENSHOTS && width===390 && theme==='light'){
+              fs.mkdirSync(process.env.MOBILE_SCREENSHOTS,{recursive:true});
+              await page.screenshot({path:path.join(process.env.MOBILE_SCREENSHOTS,'finance-annual.png'),fullPage:true});
+            }
+            await page.locator('[data-finance-period=month]').click();
+          }
           if(mobile){
             await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await wait(page);
             const bottom=await page.locator('.view.active').evaluate(el=>el.getBoundingClientRect().bottom);

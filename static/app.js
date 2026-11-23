@@ -61,7 +61,9 @@ const PALETTE = ["#4a6cf7", "#2fa96e", "#df9a2b", "#e5484d", "#9b59b6", "#00b8d4
 const state = {
   db: null, view: "dashboard",
   courseSearch: "",
+  financePeriod: "month",
   financeMonth: todayISO().slice(0, 7),
+  financeYear: todayISO().slice(0, 4),
   weekOffset: 0, reviewTab: "daily", subjectTab: "points",
 };
 
@@ -561,6 +563,83 @@ function renderDeadlines() {
 
 /* ================= 记账 ================= */
 function renderFinance() {
+  const annual = state.financePeriod === "year";
+  $("#financeMonth").hidden = $("#financeMonthly").hidden = annual;
+  $("#financeYear").hidden = $("#financeAnnual").hidden = !annual;
+  $$("#financePeriod button").forEach(button => {
+    const active = button.dataset.financePeriod === state.financePeriod;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (annual) renderFinanceYear();
+  else renderFinanceMonth();
+}
+
+function renderFinanceYear() {
+  const year = state.financeYear;
+  const years = new Set([todayISO().slice(0, 4), year]);
+  const months = Array.from({ length: 12 }, () => ({ expense: 0, income: 0 }));
+  let mainExpense = 0, travelExpense = 0, income = 0, expenseCount = 0, incomeCount = 0;
+
+  for (const record of state.db.transactions) {
+    const date = /^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/.exec(record.date);
+    const amount = Number(record.amount);
+    if (!date || !Number.isFinite(amount)) continue;
+    if (record.type !== "expense" && record.type !== "income") continue;
+    years.add(date[1]);
+    if (date[1] !== year) continue;
+    const month = months[Number(date[2]) - 1];
+    if (record.type === "expense") {
+      month.expense += amount;
+      if (record.tripId) travelExpense += amount;
+      else mainExpense += amount;
+      expenseCount++;
+    } else {
+      month.income += amount;
+      income += amount;
+      incomeCount++;
+    }
+  }
+
+  const yearPicker = $("#financeYear");
+  const yearOptions = [...years].sort().reverse();
+  if ([...yearPicker.options].map(option => option.value).join() !== yearOptions.join()) {
+    yearPicker.replaceChildren(...yearOptions.map(value => new Option(`${value} 年`, value)));
+  }
+  yearPicker.value = year;
+
+  const peak = Math.max(0, ...months.map(month => Math.max(month.expense, month.income))) || 1;
+  const amountCell = (amount, type) => `<td class="annual-amount ${type}">
+    <span>${amount ? money(amount) : "—"}</span>
+    <div class="annual-meter" aria-hidden="true"><div style="width:${Math.max(0, amount) / peak * 100}%"></div></div>
+  </td>`;
+  $("#financeAnnual").innerHTML = `
+    <div class="stats-grid stats-2 annual-totals">
+      <div class="stat-card">
+        <div class="stat-ico" aria-hidden="true">📉</div>
+        <div><div class="label">全年支出</div><div class="value red">${money(mainExpense + travelExpense)}</div>
+          <div class="sub annual-split"><span>主账本 ${money(mainExpense)}</span><span>旅行 ${money(travelExpense)}</span></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-ico" aria-hidden="true">📈</div>
+        <div><div class="label">全年收入</div><div class="value green">${money(income)}</div><div class="sub">${incomeCount} 笔收入</div></div>
+      </div>
+    </div>
+    <div class="panel annual-breakdown">
+      <div class="panel-head"><h3 id="annualMonthsLabel">每月收支</h3></div>
+      ${expenseCount || incomeCount ? `<table class="annual-months" aria-labelledby="annualMonthsLabel">
+        <thead><tr><th scope="col">月份</th><th scope="col">支出</th><th scope="col">收入</th></tr></thead>
+        <tbody>${months.map((month, index) => {
+          const monthKey = `${year}-${String(index + 1).padStart(2, "0")}`;
+          return `<tr><th scope="row"><button type="button" data-finance-month="${monthKey}" aria-label="查看 ${index + 1} 月账目">${index + 1} 月 <span aria-hidden="true">›</span></button></th>
+            ${amountCell(month.expense, "expense")}${amountCell(month.income, "income")}</tr>`;
+        }).join("")}</tbody>
+      </table>` : '<div class="empty">这一年还没有收支记录</div>'}
+    </div>`;
+}
+
+function renderFinanceMonth() {
   const month = state.financeMonth;
   const all = state.db.transactions.filter((t) => t.date.startsWith(month));
   const exp = all.filter((t) => t.type === "expense"), inc = all.filter((t) => t.type === "income");
@@ -1026,7 +1105,32 @@ function bindEvents() {
 
   // 课程 / 记账筛选
   $("#courseSearch").addEventListener("input", (e) => { state.courseSearch = e.target.value; renderCourse(); });
-  $("#financeMonth").addEventListener("change", (e) => { state.financeMonth = e.target.value; renderFinance(); });
+  $("#financePeriod").addEventListener("click", event => {
+    const button = event.target.closest("[data-finance-period]");
+    if (!button || state.financePeriod === button.dataset.financePeriod) return;
+    state.financePeriod = button.dataset.financePeriod;
+    renderFinance();
+  });
+  $("#financeMonth").addEventListener("change", event => {
+    const month = event.target.value;
+    if (!month) { event.target.value = state.financeMonth; return; }
+    state.financeMonth = month;
+    state.financeYear = month.slice(0, 4);
+    renderFinance();
+  });
+  $("#financeYear").addEventListener("change", event => {
+    state.financeYear = event.target.value;
+    renderFinance();
+  });
+  $("#financeAnnual").addEventListener("click", event => {
+    const button = event.target.closest("[data-finance-month]");
+    if (!button) return;
+    state.financeMonth = $("#financeMonth").value = button.dataset.financeMonth;
+    state.financePeriod = "month";
+    renderFinance();
+    $("#financeMonth").focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  });
   $("#csvBtn").addEventListener("click", exportCSV);
 
   // 回顾

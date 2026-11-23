@@ -261,6 +261,36 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .hbar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
 .hbar { height: 10px; border-radius: 6px; background: var(--panel2); overflow: hidden; }
 .hbar > div { height: 100%; background: var(--primary); border-radius: 6px; }
+
+/* 年度收支 */
+.finance-period-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.finance-period-controls input { width: 158px; }
+.finance-period-controls select { width: auto; min-width: 100px; }
+.annual-split { display: flex; flex-wrap: wrap; column-gap: 12px; }
+.annual-split span { min-width: 0; }
+.annual-months { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
+.annual-months thead { color: var(--muted); font-size: 12px; }
+.annual-months thead th:first-child { width: clamp(60px, 19%, 130px); }
+.annual-months th, .annual-months td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.annual-months tbody tr:last-child > * { border-bottom: 0; }
+.annual-months th button {
+  padding: 5px 3px; border: 0; border-radius: 6px; background: none;
+  color: var(--text); cursor: pointer; font: inherit; white-space: nowrap;
+}
+.annual-months th button:hover { color: var(--primary-strong); }
+.annual-months th button:focus-visible { outline: 2px solid var(--primary); }
+.annual-months th button span { color: var(--muted); }
+.annual-amount { font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.annual-meter { height: 4px; margin-top: 5px; border-radius: 4px; background: var(--panel2); }
+.annual-meter div { height: 100%; border-radius: inherit; background: var(--primary); }
+.annual-amount.income .annual-meter div { background: var(--ok); }
+@media (max-width: 480px) {
+  .finance-period-controls { width: 100%; }
+  .finance-period-controls input, .finance-period-controls select { width: auto; flex: 1 1 110px; }
+  .annual-split { flex-direction: column; }
+  .annual-months th, .annual-months td { padding-inline: 5px; }
+  .annual-months th button { min-height: 38px; }
+}
 .week-label { font-weight: 700; font-size: 15px; }
 #reviewOutput { font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; margin-top: 4px; }
 
